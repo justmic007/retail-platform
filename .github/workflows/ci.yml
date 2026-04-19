@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.26"
           cache: true           # cache Go modules between runs — faster CI
 
       - name: Run golangci-lint
