@@ -40,7 +40,7 @@ help:
 
 # Start only Postgres and Redis — not the Go services (we run those locally)
 infra-up:
-	docker-compose up -d postgres redis
+	docker compose up -d postgres redis
 	@echo "Waiting for Postgres to be ready..."
 	@sleep 3
 	@echo "Infrastructure is up. Run 'make migrate-all' next."
