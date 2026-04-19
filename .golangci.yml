@@ -1,0 +1,40 @@
+# .golangci.yml
+# golangci-lint configuration for retail-platform
+# Run with: make lint
+
+run:
+  timeout: 5m
+  # Run on all modules in the workspace
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck        # ensure all errors are handled — no ignored errors
+    - gosimple        # simplify code where possible
+    - govet           # catches common mistakes (printf format errors, etc)
+    - ineffassign     # detect assignments that are never used
+    - staticcheck     # the best Go static analysis tool
+    - unused          # find unused code
+    - gofmt           # enforce standard formatting
+    - goimports       # enforce import grouping and ordering
+    - misspell        # catch spelling mistakes in comments
+    - godot           # comments should end with a period
+    - contextcheck    # ensure context is passed correctly to functions
+    - noctx           # find HTTP requests without context
+    - exhaustruct     # ensure structs are fully initialised (catches missed fields)
+    - wrapcheck       # ensure errors from external packages are wrapped
+
+linters-settings:
+  gofmt:
+    simplify: true
+  goimports:
+    # Group imports: stdlib, then external, then internal
+    local-prefixes: retail-platform
+
+issues:
+  # Don't report issues in test files for some strict rules
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - exhaustruct
+        - wrapcheck
