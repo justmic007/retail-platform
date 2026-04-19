@@ -1,0 +1,12 @@
+go 1.26
+
+// This file links all our service modules and the shared pkg module
+// into one workspace. This means services can import pkg/ locally
+// without publishing anything to the internet.
+use (
+	./pkg
+	./services/auth
+	./services/inventory
+	./services/notification
+	./services/order
+)
