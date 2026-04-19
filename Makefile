@@ -50,7 +50,7 @@ infra-down:
 
 # WARNING: this deletes all data
 infra-reset:
-	docker-compose down -v
+	docker compose down -v
 	@echo "All volumes deleted. Fresh start."
 
 # ── Run services ──────────────────────────────────────────────────────────────

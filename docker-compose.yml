@@ -29,7 +29,7 @@ services:
       POSTGRES_PASSWORD: retailsecret
       POSTGRES_DB: auth_db          # default database (auth service)
     ports:
-      - "5432:5432"                 # exposed to host so you can use TablePlus/DBeaver
+      - "5433:5432"                 # exposed to host so you can use TablePlus/DBeaver
     volumes:
       - postgres_data:/var/lib/postgresql/data
       # This script creates the other two databases on first startup

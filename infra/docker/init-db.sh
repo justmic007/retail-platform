@@ -5,11 +5,12 @@
 
 set -e
 
-psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" <<-EOSQL
+# Connect to the default 'postgres' database (always exists) to create the others
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
     CREATE DATABASE order_db;
     CREATE DATABASE inventory_db;
-    GRANT ALL PRIVILEGES ON DATABASE order_db TO retail;
-    GRANT ALL PRIVILEGES ON DATABASE inventory_db TO retail;
+    GRANT ALL PRIVILEGES ON DATABASE order_db TO $POSTGRES_USER;
+    GRANT ALL PRIVILEGES ON DATABASE inventory_db TO $POSTGRES_USER;
 EOSQL
 
 echo "Databases created: auth_db, order_db, inventory_db"
