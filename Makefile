@@ -46,7 +46,7 @@ infra-up:
 	@echo "Infrastructure is up. Run 'make migrate-all' next."
 
 infra-down:
-	docker-compose down
+	docker compose down
 
 # WARNING: this deletes all data
 infra-reset:
@@ -72,7 +72,7 @@ run-notification:
 # golang-migrate reads SQL files from infra/migrations/<service>/
 # and applies them in order (001_create_users.up.sql, 002_add_index.up.sql, etc.)
 
-POSTGRES_BASE=postgres://retail:retailsecret@localhost:5432
+POSTGRES_BASE=postgres://retail:retailsecret@localhost:5433
 
 migrate-auth:
 	migrate -path infra/migrations/auth -database "$(POSTGRES_BASE)/auth_db?sslmode=disable" up

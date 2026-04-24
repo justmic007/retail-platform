@@ -17,7 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users (email);
 -- Trigger: auto-update updated_at ───────────────────────────────────────
 -- This trigger fires BEFORE any UPDATE on the users table and sets updated_at = NOW().
 
-CREATE OR REPLACE FUNCTION updated_at_column()
+CREATE OR REPLACE FUNCTION update_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
     NEW.updated_at = NOW();
