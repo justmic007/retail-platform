@@ -3,6 +3,7 @@
 package jwt
 
 import (
+	"crypto/rand"
 	"encoding/hex"
 	"fmt"
 	"time"
@@ -104,7 +105,7 @@ func (m *Manager) ValidateToken(tokenString string) (*Claims, error) {
 func (m *Manager) GenerateRefreshToken() (string, error) {
 	// 32 bytes = 256 bits of entropy = practically unguessable
 	bytes := make([]byte, 32)
-	if _, err := rand.Read(bytes): err != nil {
+	if _, err := rand.Read(bytes); err != nil {
 		return "", fmt.Errorf("generate refresh token: %w", err)
 	}
 	// hex.EncodeToString converts bytes to a hex string (64 characters)

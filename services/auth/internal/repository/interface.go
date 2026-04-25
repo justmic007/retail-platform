@@ -25,7 +25,7 @@ type UserRepository interface {
 	// Create inserts a new user into the database.
 	// Returns the created user (with ID and timestamps populated by the DB).
 	// Returns an error if the email already exists (unique constraint violation).
-	Create(ctx context.Context, user *domain.user) (*domain.User, error)
+	Create(ctx context.Context, user *domain.User) (*domain.User, error)
 
 	// FindByEmail retrieves a user by email address.
 	// Used in Login — find the user then compare the password hash.

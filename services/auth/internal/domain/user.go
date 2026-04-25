@@ -45,9 +45,11 @@ type UserResponse struct {
 // Usage: c.JSON(200, user.ToResponse())
 func (u *User) ToResponse() *UserResponse {
 	return &UserResponse{
-		ID:        u.ID,
-		Email:     u.Email,
-		Role:      string(u.Role),
+		ID:    u.ID,
+		Email: u.Email,
+		// Role:  string(u.Role),
+		Role: u.Role,
+
 		CreatedAt: u.CreatedAt,
 	}
 }

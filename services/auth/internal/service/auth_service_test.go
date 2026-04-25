@@ -148,10 +148,12 @@ func TestRegister(t *testing.T) {
 			svc, _, _ := newTestService()
 			ctx := context.Background()
 
-			// First registration always succeeds
-			_, _ = svc.Register(ctx, domain.RegisterRequest{
-				Email: "micah@example.com", Password: "securepassword",
-			})
+			// For duplicate email test, pre-register the email first
+			if tc.wantErr && tc.errIs == domain.ErrEmailTaken {
+				_, _ = svc.Register(ctx, domain.RegisterRequest{
+					Email: "micah@example.com", Password: "securepassword",
+				})
+			}
 
 			// Now run the actual test case
 			user, err := svc.Register(ctx, tc.req)
