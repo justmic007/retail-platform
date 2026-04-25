@@ -10,6 +10,7 @@ package repository
 import (
 	"context"
 	"retail-platform/auth/internal/domain"
+	"time"
 )
 
 // UserRepository defines all database operations related to users.
@@ -35,4 +36,28 @@ type UserRepository interface {
 	// Used in the /me endpoint — get the current user's profile.
 	// Returns domain.ErrNotFound if no user has that ID.
 	FindByID(ctx context.Context, id string) (*domain.User, error)
+}
+
+// TokenRepository defines all database operations for refresh tokens.
+// Refresh tokens are stored in the database so they can be invalidated
+// server-side (unlike JWTs which are stateless and cannot be revoked).
+type TokenRepository interface {
+	// StoreRefreshToken saves a new refresh token for a user.
+	// Called after successful login or token refresh.
+	// expiry is the time at which this token becomes invalid.
+	StoreRefreshToken(ctx context.Context, userID string, token string, expiry time.Time) error
+
+	// FindRefreshToken looks up a refresh token and returns the associated userID.
+	// Called when a client requests a new access token using their refresh token.
+	// Returns an error if the token doesn't exist or has expired.
+	FindRefreshToken(ctx context.Context, token string) (userID string, err error)
+
+	// DeleteRefreshToken removes a single refresh token.
+	// Called on logout — invalidates this specific session.
+	DeleteRefreshToken(ctx context.Context, token string) error
+
+	// DeleteAllUserTokens removes ALL refresh tokens for a user.
+	// Called when a user changes their password or requests "logout all devices".
+	// After this, the user must log in again on every device.
+	DeleteAllUserTokens(ctx context.Context, userID string) error
 }
