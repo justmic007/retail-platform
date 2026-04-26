@@ -93,17 +93,28 @@ rollback-auth:
 # ── Testing ───────────────────────────────────────────────────────────────────
 
 test:
-	go test ./...
+	cd pkg && go test ./...
+	cd services/auth && go test ./...
+	cd services/order && go test ./...
+	cd services/inventory && go test ./...
+	cd services/notification && go test ./...
 
 # -race detects race conditions in concurrent code — ALWAYS run this
-# It's slower but catches bugs that only appear under concurrency
 test-race:
-	go test -race ./...
+	cd pkg && go test -race ./...
+	cd services/auth && go test -race ./...
+	cd services/order && go test -race ./...
+	cd services/inventory && go test -race ./...
+	cd services/notification && go test -race ./...
+
+test-auth:
+	cd services/auth && go test -race ./... -v
 
 test-coverage:
-	go test -race -coverprofile=coverage.out ./...
-	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report: open coverage.html"
+	cd services/auth && go test -race -coverprofile=coverage.out ./...
+	cd services/auth && go tool cover -html=coverage.out -o coverage.html
+	@echo "Coverage report: open services/auth/coverage.html"
+
 
 # ── Code quality ──────────────────────────────────────────────────────────────
 
@@ -113,6 +124,18 @@ lint:
 # gofmt formats code. In Go, formatting is not a style preference — it's enforced.
 fmt:
 	gofmt -s -w .
+
+# Add a dependency to the shared pkg/ module
+# Usage: make get-pkg-dep DEP=github.com/google/uuid
+get-pkg-dep:
+	cd pkg && go get $(DEP) && go mod tidy && cd ..
+	@echo "Run 'make tidy' to update all services"
+
+# Add a dependency to a specific service
+# Usage: make get-dep SERVICE=auth DEP=github.com/joho/godotenv
+get-dep:
+	cd services/$(SERVICE) && go get $(DEP) && go mod tidy && cd ../..
+	@echo "Added $(DEP) to $(SERVICE) service"
 
 # go mod tidy removes unused dependencies and adds missing ones
 tidy:

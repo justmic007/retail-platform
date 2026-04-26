@@ -15,9 +15,19 @@ import (
 	"retail-platform/pkg/jwt"
 	"retail-platform/pkg/logger"
 	"retail-platform/pkg/validator"
+
+	// godotenv loads .env file into environment variables.
+	// The _ = means we ignore the error intentionally —
+	// in production there is no .env file and that is fine.
+	// Real production env vars are injected by the platform (Railway, GCP).
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if present (local development only)
+	// Must be called BEFORE config.Load() so env vars are available
+	_ = godotenv.Load()
+
 	// Step 1: Load config — exits if required env vars are missing
 	cfg := config.Load()
 

@@ -3,7 +3,6 @@ module retail-platform/auth
 go 1.26
 
 require (
-
 	// Config management
 	github.com/caarlos0/env/v10 v10.0.0
 
@@ -19,6 +18,8 @@ require (
 	retail-platform/pkg v0.0.0
 )
 
+require github.com/joho/godotenv v1.5.1
+
 require (
 	github.com/bytedance/gopkg v0.1.3 // indirect
 	github.com/bytedance/sonic v1.15.0 // indirect
@@ -32,6 +33,7 @@ require (
 	github.com/goccy/go-json v0.10.5 // indirect
 	github.com/goccy/go-yaml v1.19.2 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect

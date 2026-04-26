@@ -6,6 +6,7 @@ package middleware
 
 import (
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 // RequestIDKey is the key used to store the request ID in Gin's context.
