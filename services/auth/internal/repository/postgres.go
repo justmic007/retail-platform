@@ -54,7 +54,7 @@ func (r *postgresUserRepo) Create(ctx context.Context, user *domain.User) (*doma
 	query := `
 		INSERT INTO users (email, password_hash, role)
 		VALUES ($1, $2, $3)
-		RETURNING id, email, password_hash role created_at, updated_at
+		RETURNING id, email, password_hash, role, created_at, updated_at
 	`
 
 	created := &domain.User{}
