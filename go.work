@@ -1,4 +1,4 @@
-go 1.26
+go 1.23
 
 // This file links all our service modules and the shared pkg module
 // into one workspace. This means services can import pkg/ locally
