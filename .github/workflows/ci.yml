@@ -6,7 +6,7 @@ name: CI
 
 on:
   push:
-    branches: ["**"]        # all branches
+    branches: [main]        # all branches
   pull_request:
     branches: [main]
 
@@ -22,7 +22,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.26"
+          go-version: "1.23"
           cache: true           # cache Go modules between runs — faster CI
 
       - name: Run golangci-lint
@@ -69,7 +69,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
           cache: true
 
       - name: Create test databases
@@ -99,7 +99,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.22"
+          go-version: "1.23"
           cache: true
 
       - name: Build all services
