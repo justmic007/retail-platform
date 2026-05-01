@@ -13,10 +13,13 @@ linters:
     - ineffassign   # detect assignments that are never used
     - staticcheck   # the best Go static analysis tool
     - unused        # find unused code
-    - gofmt         # enforce standard formatting 
     - misspell      # catch spelling mistakes in comments
     - contextcheck  # ensure context is passed correctly to functions
     - noctx         # find HTTP requests without context
+
+formatters:
+  enable:
+    - gofmt
 
   settings:
     gofmt:
