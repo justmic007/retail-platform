@@ -14,14 +14,14 @@ import (
 type ErrorCode string
 
 const (
-	ErrCodeNotFound         ErrorCode = "NOT_FOUND"
-	ErrCodeUnauthorized     ErrorCode = "UNAUTHORIZED"
-	ErrCodeForbidden        ErrorCode = "FORBIDDEN"
-	ErrCodeBadRequest       ErrorCode = "BAD_REQUEST"
-	ErrCodeConflict         ErrorCode = "CONFLICT"
-	ErrCodeInternal         ErrorCode = "INTERNAL_ERROR"
+	ErrCodeNotFound          ErrorCode = "NOT_FOUND"
+	ErrCodeUnauthorized      ErrorCode = "UNAUTHORIZED"
+	ErrCodeForbidden         ErrorCode = "FORBIDDEN"
+	ErrCodeBadRequest        ErrorCode = "BAD_REQUEST"
+	ErrCodeConflict          ErrorCode = "CONFLICT"
+	ErrCodeInternal          ErrorCode = "INTERNAL_ERROR"
 	ErrCodeInsufficientStock ErrorCode = "INSUFFICIENT_STOCK"
-	ErrCodeInvalidToken     ErrorCode = "INVALID_TOKEN"
+	ErrCodeInvalidToken      ErrorCode = "INVALID_TOKEN"
 )
 
 // AppError is our custom error type.
