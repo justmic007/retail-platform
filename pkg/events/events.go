@@ -25,21 +25,21 @@ const (
 // Notice: no database IDs from internal tables — only what's needed
 // to send a notification. Services share events, not database schemas.
 type OrderEvent struct {
-	Type      EventType `json:"type"`
-	OrderID   string    `json:"order_id"`
-	UserID    string    `json:"user_id"`
-	UserEmail string    `json:"user_email"`
-	Total     float64   `json:"total"`
+	Type       EventType `json:"type"`
+	OrderID    string    `json:"order_id"`
+	UserID     string    `json:"user_id"`
+	UserEmail  string    `json:"user_email"`
+	Total      float64   `json:"total"`
 	OccurredAt time.Time `json:"occurred_at"`
 }
 
 // StockEvent is published when stock drops below a threshold.
 type StockEvent struct {
-	Type       EventType `json:"type"`
-	ProductID  string    `json:"product_id"`
-	ProductName string   `json:"product_name"`
-	StockLevel int       `json:"stock_level"`
-	OccurredAt time.Time `json:"occurred_at"`
+	Type        EventType `json:"type"`
+	ProductID   string    `json:"product_id"`
+	ProductName string    `json:"product_name"`
+	StockLevel  int       `json:"stock_level"`
+	OccurredAt  time.Time `json:"occurred_at"`
 }
 
 // Bus holds the channels that services write to and read from.

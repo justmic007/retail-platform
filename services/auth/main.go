@@ -1,6 +1,6 @@
 // Package main is the entry point for the Auth Service.
 // TODO: wire together config, database, repository,
-// service, handler, and server. 
+// service, handler, and server.
 // TODO:Test it just confirms the service compiles.
 package main
 

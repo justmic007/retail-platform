@@ -97,7 +97,6 @@ func (m *Manager) ValidateToken(tokenString string) (*Claims, error) {
 	return claims, nil
 }
 
-
 // GenerateRefreshToken creates a cryptographically random refresh token.
 //
 // crypto/rand generates true randomness from the OS entropy source.

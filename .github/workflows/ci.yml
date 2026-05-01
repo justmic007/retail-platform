@@ -6,12 +6,12 @@ name: CI
 
 on:
   push:
-    branches: [main]        # all branches
+    branches: ["**"]
   pull_request:
     branches: [main]
 
 jobs:
-  # ── Lint ────────────────────────────────────────────────────────────────────
+  # ── Lint ──────────────────────────────────────────────────────────────────
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -22,21 +22,23 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
-          cache: true           # cache Go modules between runs — faster CI
+          go-version: "1.25"
+          cache: true
+
+      - name: Install golangci-lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v4
-        with:
-          version: latest
-          args: --timeout=5m
+        run: |
+          grep -E '^\s+\.' go.work | tr -d ' \t' | sed 's|^\./||' | while read dir; do
+            echo "--- Linting $dir ---"
+            (cd $dir && golangci-lint run --timeout=5m ./...)
+          done
 
-  # ── Test ────────────────────────────────────────────────────────────────────
+  # ── Test ──────────────────────────────────────────────────────────────────
   test:
     name: Test
     runs-on: ubuntu-latest
-    # Start Postgres and Redis as service containers
-    # These are available to our tests at localhost:5432 and localhost:6379
     services:
       postgres:
         image: postgres:16-alpine
@@ -69,7 +71,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache: true
 
       - name: Create test databases
@@ -77,21 +79,40 @@ jobs:
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE order_db;"
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE inventory_db;"
 
-      - name: Run tests with race detector
-        # -race: detects race conditions in concurrent code
-        # -count=1: disable test caching (always run fresh)
-        # -timeout 120s: fail if tests take longer than 2 minutes
-        run: go test -race -count=1 -timeout 120s ./...
+      - name: Run tests — pkg
+        run: cd pkg && go test -race -count=1 -timeout 120s ./...
+        env:
+          JWT_SECRET: test-secret-for-ci-only
+
+      - name: Run tests — auth
+        run: cd services/auth && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/auth_db?sslmode=disable
+          JWT_SECRET: test-secret-for-ci-only
+
+      - name: Run tests — order
+        run: cd services/order && go test -race -count=1 -timeout 120s ./...
+        env:
+          DATABASE_URL: postgres://retail:retailsecret@localhost:5432/order_db?sslmode=disable
+          JWT_SECRET: test-secret-for-ci-only
+
+      - name: Run tests — inventory
+        run: cd services/inventory && go test -race -count=1 -timeout 120s ./...
+        env:
+          DATABASE_URL: postgres://retail:retailsecret@localhost:5432/inventory_db?sslmode=disable
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: test-secret-for-ci-only
 
-  # ── Build ────────────────────────────────────────────────────────────────────
+      - name: Run tests — notification
+        run: cd services/notification && go test -race -count=1 -timeout 120s ./...
+        env:
+          JWT_SECRET: test-secret-for-ci-only
+
+  # ── Build ──────────────────────────────────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
-    needs: [lint, test]     # only build if lint AND test pass
+    needs: [lint, test]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -99,17 +120,15 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.23"
+          go-version: "1.25"
           cache: true
 
       - name: Build all services
         run: |
           cd services/auth && go build ./cmd/server/...
-          cd ../../services/order && go build ./cmd/server/...
-          cd ../../services/inventory && go build ./cmd/server/...
-          cd ../../services/notification && go build ./cmd/server/...
-        # CGO_ENABLED=0: builds a static binary with no C dependencies
-        # This is required for distroless Docker images
+          # cd ../../services/order && go build ./cmd/server/...
+          # cd ../../services/inventory && go build ./cmd/server/...
+          # cd ../../services/notification && go build ./cmd/server/...
         env:
           CGO_ENABLED: "0"
           GOOS: linux

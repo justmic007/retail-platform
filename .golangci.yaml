@@ -1,0 +1,31 @@
+# .golangci.yml — golangci-lint v2 configuration
+# Run with: make lint
+version: "2"
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+  go: "1.25"
+
+linters:
+  enable:
+    - errcheck
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - contextcheck
+    - noctx
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
+
+formatters:
+  enable:
+    - gofmt
+  settings:
+    gofmt:
+      simplify: true
