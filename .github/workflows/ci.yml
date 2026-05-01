@@ -25,11 +25,18 @@ jobs:
           go-version: "1.25"
           cache: true
 
-      - name: Run golangci-lint
+      - name: Install golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
           version: v2.11.4
-          args: --timeout=5m
+          install-mode: binary
+
+      - name: Run golangci-lint
+        run: |
+          grep -E '^\s+\.' go.work | tr -d ' \t.' | while read dir; do
+            echo "--- Linting $dir ---"
+            (cd $dir && golangci-lint run --timeout=5m ./...)
+          done
 
   # ── Test ──────────────────────────────────────────────────────────────────
   test:
