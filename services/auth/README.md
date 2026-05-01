@@ -13,6 +13,7 @@ Production-grade authentication service built in Go. Issues and validates JWT to
 - [API Reference](#api-reference)
 - [Security Design Decisions](#security-design-decisions)
 - [Running Locally](#running-locally)
+- [Postman Collection](#postman-collection)
 - [Running Tests](#running-tests)
 - [Environment Variables](#environment-variables)
 - [Key Design Decisions](#key-design-decisions)
@@ -515,6 +516,22 @@ make run-auth
 ```
 
 Service starts on `http://localhost:8080`
+
+---
+
+## Postman Collection
+
+A ready-to-use Postman collection is included at `postman_collection.json`.
+
+**Import it:**
+1. Open Postman → **Import** → select `services/auth/postman_collection.json`
+2. The `base_url` variable is pre-set to `http://localhost:8080`
+
+**Recommended order:**
+1. **Register** — creates a user
+2. **Login** — tokens are auto-saved to collection variables
+3. **Get Current User** — uses the saved token automatically
+4. **Security Tests** folder — verifies auth behaviour (wrong password, missing token, etc.)
 
 ---
 
