@@ -38,3 +38,35 @@ issues:
       linters:
         - exhaustruct
         - wrapcheck
+
+
+
+
+
+# .golangci.yml — golangci-lint v2 configuration
+run:
+  timeout: 5m
+  modules-download-mode: readonly
+
+linters:
+  enable:
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - gofmt
+    - misspell
+    - contextcheck
+    - noctx
+
+  settings:
+    gofmt:
+      simplify: true
+
+issues:
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck

@@ -1,6 +1,6 @@
 module retail-platform/inventory
 
-go 1.26
+go 1.23
 
 require retail-platform/pkg v0.0.0
 

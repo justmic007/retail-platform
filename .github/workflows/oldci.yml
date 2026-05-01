@@ -28,7 +28,7 @@ jobs:
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v2.1.6
+          version: v1.64.8
           args: --timeout=5m
 
   # ── Test ──────────────────────────────────────────────────────────────────
@@ -75,31 +75,31 @@ jobs:
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE order_db;"
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE inventory_db;"
 
-      - name: Run tests — pkg
+      - name: Run tests — pkg module
         run: cd pkg && go test -race -count=1 -timeout 120s ./...
         env:
           JWT_SECRET: test-secret-for-ci-only
 
-      - name: Run tests — auth
+      - name: Run tests — auth service
         run: cd services/auth && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/auth_db?sslmode=disable
           JWT_SECRET: test-secret-for-ci-only
 
-      - name: Run tests — order
+      - name: Run tests — order service
         run: cd services/order && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/order_db?sslmode=disable
           JWT_SECRET: test-secret-for-ci-only
 
-      - name: Run tests — inventory
+      - name: Run tests — inventory service
         run: cd services/inventory && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/inventory_db?sslmode=disable
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: test-secret-for-ci-only
 
-      - name: Run tests — notification
+      - name: Run tests — notification service
         run: cd services/notification && go test -race -count=1 -timeout 120s ./...
         env:
           JWT_SECRET: test-secret-for-ci-only
