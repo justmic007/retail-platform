@@ -30,7 +30,7 @@ jobs:
 
       - name: Run golangci-lint
         run: |
-          grep -E '^\s+\.' go.work | tr -d ' \t.' | while read dir; do
+          grep -E '^\s+\.' go.work | tr -d ' \t' | sed 's|^\./||' | while read dir; do
             echo "--- Linting $dir ---"
             (cd $dir && golangci-lint run --timeout=5m ./...)
           done
