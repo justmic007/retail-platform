@@ -30,6 +30,7 @@ jobs:
         with:
           version: v2.11.4
           install-mode: binary
+          skip-run: true
 
       - name: Run golangci-lint
         run: |
