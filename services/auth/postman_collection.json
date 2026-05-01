@@ -1,0 +1,533 @@
+{
+    "info": {
+        "name": "Retail Platform — Auth Service",
+        "description": "Complete API collection for the Auth Service. Import this into Postman and set the `base_url` variable to test all endpoints.\n\n**Setup:**\n1. Import this collection\n2. Set `base_url` variable to `http://localhost:8080`\n3. Run Register → Login (access_token auto-saves) → test protected routes",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "http://localhost:8080",
+            "description": "Auth Service base URL. Change to deployed URL for production testing."
+        },
+        {
+            "key": "access_token",
+            "value": "",
+            "description": "JWT access token — auto-populated after Login request"
+        },
+        {
+            "key": "refresh_token",
+            "value": "",
+            "description": "Refresh token — auto-populated after Login request"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/health",
+                        "description": "Liveness probe. Returns 200 if the service process is running. Used by Kubernetes to decide whether to restart the pod."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"service\": \"auth\",\n  \"status\": \"ok\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Readiness Check",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/ready",
+                        "description": "Readiness probe. Returns 200 if the service is ready to handle traffic (DB connected). Used by Kubernetes to decide whether to send traffic to this pod."
+                    },
+                    "response": [
+                        {
+                            "name": "200 Ready",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"service\": \"auth\",\n  \"status\": \"ready\"\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Authentication",
+            "item": [
+                {
+                    "name": "Register",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "// Verify successful registration",
+                                    "pm.test('Status is 201 Created', function() {",
+                                    "    pm.response.to.have.status(201);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has user object', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('user');",
+                                    "    pm.expect(body.user).to.have.property('id');",
+                                    "    pm.expect(body.user).to.have.property('email');",
+                                    "    pm.expect(body.user).to.have.property('role');",
+                                    "    pm.expect(body.user).to.have.property('created_at');",
+                                    "});",
+                                    "",
+                                    "pm.test('Password hash NOT in response (security check)', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.user).to.not.have.property('password_hash');",
+                                    "    pm.expect(body.user).to.not.have.property('password');",
+                                    "});",
+                                    "",
+                                    "pm.test('Role defaults to customer', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.user.role).to.equal('customer');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/register",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"micah@example.com\",\n  \"password\": \"securepassword123\"\n}"
+                        },
+                        "description": "Create a new user account.\n\n**Validation rules:**\n- email: required, must be valid email format\n- password: required, minimum 8 characters\n\n**Security:** Password is hashed with bcrypt cost 12 before storage. The hash is never returned in any response."
+                    },
+                    "response": [
+                        {
+                            "name": "201 Created",
+                            "status": "Created",
+                            "code": 201,
+                            "body": "{\n  \"user\": {\n    \"id\": \"5fc1d649-2a76-49f5-94a8-54a4bc2e7873\",\n    \"email\": \"micah@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-04-26T03:44:29.059418+01:00\"\n  }\n}"
+                        },
+                        {
+                            "name": "400 Bad Request — validation error",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"error\": \"field 'email' failed validation: email\"\n}"
+                        },
+                        {
+                            "name": "409 Conflict — email taken",
+                            "status": "Conflict",
+                            "code": 409,
+                            "body": "{\n  \"code\": \"CONFLICT\",\n  \"error\": \"an account with this email already exists\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Login",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has access_token, refresh_token, expires_in', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('access_token');",
+                                    "    pm.expect(body).to.have.property('refresh_token');",
+                                    "    pm.expect(body).to.have.property('expires_in');",
+                                    "    pm.expect(body.expires_in).to.equal(900);",
+                                    "});",
+                                    "",
+                                    "// Auto-save tokens to collection variables",
+                                    "// These are used automatically by protected route requests",
+                                    "const body = pm.response.json();",
+                                    "if (body.access_token) {",
+                                    "    pm.collectionVariables.set('access_token', body.access_token);",
+                                    "    console.log('access_token saved to collection variables');",
+                                    "}",
+                                    "if (body.refresh_token) {",
+                                    "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                                    "    console.log('refresh_token saved to collection variables');",
+                                    "}",
+                                    "",
+                                    "pm.test('expires_in is 900 seconds (15 minutes)', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.expires_in).to.equal(900);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/login",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"micah@example.com\",\n  \"password\": \"securepassword123\"\n}"
+                        },
+                        "description": "Authenticate a user and receive JWT tokens.\n\n**Returns:**\n- `access_token`: JWT valid for 15 minutes. Include in Authorization header for protected routes.\n- `refresh_token`: Random token valid for 7 days. Use to get a new access token when it expires.\n- `expires_in`: Seconds until access token expires (900 = 15 minutes)\n\n**Security:** Returns identical error for wrong email AND wrong password — prevents user enumeration.\n\n**Note:** The test script automatically saves tokens to collection variables."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"58f1dbdb8d7bd42c7d02c87562fdf8d5...\",\n  \"expires_in\": 900\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized — wrong credentials",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid email or password\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Refresh Token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// Save new tokens — old ones are now invalid",
+                                    "const body = pm.response.json();",
+                                    "if (body.access_token) {",
+                                    "    pm.collectionVariables.set('access_token', body.access_token);",
+                                    "}",
+                                    "if (body.refresh_token) {",
+                                    "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                                    "}",
+                                    "",
+                                    "pm.test('New refresh token is different from old one (token rotation)', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.refresh_token).to.not.be.empty;",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/refresh",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+                        },
+                        "description": "Get a new access token using your refresh token.\n\n**Token rotation:** The old refresh token is invalidated and a new one is issued. If an attacker stole your refresh token, using it here terminates their session.\n\n**When to call:** When your access token expires (after 15 minutes / 900 seconds)."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK — new tokens issued",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"new_refresh_token_here...\",\n  \"expires_in\": 900\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized — invalid token",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid or malformed token\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Current User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Returns authenticated user profile', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('user');",
+                                    "    pm.expect(body.user).to.have.property('id');",
+                                    "    pm.expect(body.user).to.have.property('email');",
+                                    "});",
+                                    "",
+                                    "pm.test('No password in response', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(JSON.stringify(body)).to.not.include('password');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/auth/me",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "description": "JWT access token from Login response. Auto-populated if you ran Login first."
+                            }
+                        ],
+                        "description": "Get the currently authenticated user's profile.\n\n**Requires:** Valid JWT in Authorization header.\n\n**How it works:** The JWT contains the user_id. The middleware validates the JWT and extracts the user_id. The handler fetches the full profile from the database."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"user\": {\n    \"id\": \"5fc1d649-2a76-49f5-94a8-54a4bc2e7873\",\n    \"email\": \"micah@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-04-26T03:44:29.059418+01:00\"\n  }\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized — no token",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"authorization header is required\"\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized — expired token",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid or expired token\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Logout",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "// Clear saved tokens after logout",
+                                    "pm.collectionVariables.set('access_token', '');",
+                                    "pm.collectionVariables.set('refresh_token', '');",
+                                    "console.log('Tokens cleared from collection variables');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/logout",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+                        },
+                        "description": "Invalidate the refresh token.\n\n**Why send refresh_token in the body?**\nJWTs (access tokens) are stateless — they cannot be revoked server-side. Only the refresh token is stored in the database and can be deleted. Logout works by deleting the refresh_token row.\n\n**After logout:** The access token remains valid until it expires (max 15 minutes). The refresh token is immediately invalid — the user cannot get new access tokens without logging in again."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"logged out successfully\"\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Security Tests",
+            "description": "Tests that verify security behaviour — these should all return errors.",
+            "item": [
+                {
+                    "name": "Access protected route without token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error message is correct', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/auth/me",
+                        "description": "Should return 401 — no Authorization header sent."
+                    }
+                },
+                {
+                    "name": "Login with wrong password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error is generic — does not reveal if email exists', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.error).to.equal('invalid email or password');",
+                                    "    // IMPORTANT: same message as wrong email — prevents user enumeration",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/login",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"micah@example.com\",\n  \"password\": \"wrongpassword\"\n}"
+                        },
+                        "description": "Verify that wrong password returns generic error — not 'wrong password' specifically."
+                    }
+                },
+                {
+                    "name": "Login with non-existent email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Same error as wrong password — user enumeration prevented', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.error).to.equal('invalid email or password');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/login",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"doesnotexist@example.com\",\n  \"password\": \"anypassword\"\n}"
+                        },
+                        "description": "Verify that unknown email returns same error as wrong password."
+                    }
+                },
+                {
+                    "name": "Register with invalid email",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for invalid email', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/register",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"not-an-email\",\n  \"password\": \"securepassword123\"\n}"
+                        }
+                    }
+                },
+                {
+                    "name": "Register with short password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for short password', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/register",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"short\"\n}"
+                        },
+                        "description": "Password minimum is 8 characters — this should return 400."
+                    }
+                }
+            ]
+        }
+    ]
+}
