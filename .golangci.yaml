@@ -7,26 +7,25 @@ run:
 
 linters:
   enable:
-    - errcheck      # ensure all errors are handled — no ignored errors
-    - gosimple      # simplify code where possible
-    - govet         # catches common mistakes (printf format errors, etc)
-    - ineffassign   # detect assignments that are never used
-    - staticcheck   # the best Go static analysis tool
-    - unused        # find unused code
-    - misspell      # catch spelling mistakes in comments
-    - contextcheck  # ensure context is passed correctly to functions
-    - noctx         # find HTTP requests without context
+    - errcheck
+    - gosimple
+    - govet
+    - ineffassign
+    - staticcheck
+    - unused
+    - misspell
+    - contextcheck
+    - noctx
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        linters:
+          - errcheck
 
 formatters:
   enable:
     - gofmt
-
   settings:
     gofmt:
       simplify: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - errcheck
