@@ -90,6 +90,9 @@ migrate-all: migrate-auth migrate-order migrate-inventory
 rollback-auth:
 	migrate -path infra/migrations/auth -database "$(POSTGRES_BASE)/auth_db?sslmode=disable" down 1
 
+rollback-inventory:
+	migrate -path infra/migrations/inventory -database "$(POSTGRES_BASE)/inventory_db?sslmode=disable" down 1
+
 # ── Testing ───────────────────────────────────────────────────────────────────
 
 test:
