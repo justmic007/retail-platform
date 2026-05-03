@@ -15,7 +15,7 @@ type Product struct {
 	Category    string
 	IsActive    bool
 	CreatedAt   time.Time
-	updatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // StockLevel represent the stock for a product in a warehouse
@@ -25,7 +25,7 @@ type StockLevel struct {
 	Quantity    int // total physical units
 	Reserved    int // units reserved/locked by pending orders
 	WarehouseID string
-	updatedAt   time.Time
+	UpdatedAt   time.Time
 }
 
 // Available returns how many units are actually available to purchase.
