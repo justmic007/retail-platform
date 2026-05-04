@@ -87,17 +87,17 @@ func (p *ProductWithStock) ToResponse() *ProductResponse {
 // ReserveRequest is the body for POST /inventory/reserve
 // Called by Order Service when a customer places an order.
 type ReserveRequest struct {
-	ProductID string `json:"product_id" validate:"required,uuid4"`
-	Quantity  int    `json:"quantity" validate:"required,min=1"`
-	OrderID   string `json:"order_id" validate:"required,uuid4"`
+	ProductID string `json:"product_id" validate:"required"`
+	Quantity  int    `json:"quantity"   validate:"required,min=1"`
+	OrderID   string `json:"order_id"   validate:"required"`
 }
 
 // ReleaseRequest is the body for POST /inventory/release
 // Called by Order Service when an order is cancelled or fails.
 type ReleaseRequest struct {
-	ProductID string `json:"product_id" validate:"required,uuid4"`
-	Quantity  int    `json:"quantity" validate:"required,min=1"`
-	OrderID   string `json:"order_id" validate:"required,uuid4"`
+	ProductID string `json:"product_id" validate:"required"`
+	Quantity  int    `json:"quantity"   validate:"required,min=1"`
+	OrderID   string `json:"order_id"   validate:"required"`
 }
 
 // StockAdjustRequest is the body for PATCH /products/:id/stock
