@@ -14,16 +14,16 @@ import (
 )
 
 // ── Product Repository ────────────────────────────────────────────────────────
-type ProductRepositoryRepo struct {
+type postgresProductRepo struct {
 	db *pgxpool.Pool
 }
 
 // NewPostgresProductRepo creates a new Postgres product repository
-func NewPostgresProductRepo(db *pgxpool.Pool) *ProductRepositoryRepo {
-	return &ProductRepositoryRepo{db: db}
+func NewPostgresProductRepo(db *pgxpool.Pool) ProductRepository {
+	return &postgresProductRepo{db: db}
 }
 
-func (r *ProductRepositoryRepo) List(ctx context.Context) ([]*domain.Product, error) {
+func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, error) {
 	query := `
 	 SELECT id, sku, name, description, price, category, is_active, created_at, updated_at
 	 FROM products

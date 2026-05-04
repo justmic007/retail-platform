@@ -1,4 +1,3 @@
-package config
 // Package config loads all environment variables for the Inventory Service.
 package config
 

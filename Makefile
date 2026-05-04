@@ -94,6 +94,8 @@ rollback-inventory:
 	migrate -path infra/migrations/inventory -database "$(POSTGRES_BASE)/inventory_db?sslmode=disable" down 1
 
 # ── Testing ───────────────────────────────────────────────────────────────────
+test-inventory:
+	cd services/inventory && go test -race ./... -v
 
 test:
 	cd pkg && go test ./...

@@ -141,6 +141,33 @@ func (s *InventoryService) Reserve(ctx context.Context, req domain.ReserveReques
 	return nil
 }
 
+// Release returns N previously reserved units back to available.
+// Called when an order is cancelled or payment fails.
+func (s *InventoryService) Release(ctx context.Context, req domain.ReleaseRequest) error {
+	s.log.Info().
+		Str("product_id", req.ProductID).
+		Int("quantity", req.Quantity).
+		Str("order_id", req.OrderID).
+		Msg("releasing stock")
+
+	if err := s.stockRepo.Release(ctx, req.ProductID, req.Quantity); err != nil {
+		return fmt.Errorf("release stock: %w", err)
+	}
+
+	// Invalidate cache — stock has changed
+	if err := s.cache.Delete(ctx, req.ProductID); err != nil {
+		s.log.Warn().Err(err).Str("product_id", req.ProductID).
+			Msg("failed to invalidate cache after release")
+	}
+
+	s.log.Info().
+		Str("product_id", req.ProductID).
+		Int("quantity", req.Quantity).
+		Msg("stock released successfully")
+
+	return nil
+}
+
 // AdjustStock sets the total quantity for a product.
 // Used by warehouse staff when new inventory arrives.
 // Admin only — enforced at the handler/middleware level.

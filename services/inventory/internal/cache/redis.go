@@ -16,7 +16,7 @@ import (
 )
 
 // RedisCache implements StockCache using Redis.
-type RedisCache struct {
+type redisCache struct {
 	client *redis.Client
 	ttl    time.Duration
 }

@@ -17,7 +17,7 @@ type StockCache interface {
 
 	// Set stores the available stock count for a product with TTL.
 	// Called after a cache miss + Postgres query to populate the cache.
-	Set(ctx context.Context, productContext, productID string, available int) error
+	Set(ctx context.Context, productID string, available int) error
 
 	// Delete removes the cached stock for a product.
 	// Called whenever stock changes (reserve, release, adjust).
