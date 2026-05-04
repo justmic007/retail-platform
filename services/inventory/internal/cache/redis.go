@@ -38,7 +38,7 @@ func NewRedisCache(cfg *config.Config) (StockCache, error) {
 	defer cancel()
 
 	if err := client.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("Ping redis: %w", err)
+		return nil, fmt.Errorf("ping redis: %w", err)
 	}
 
 	return &redisCache{
@@ -88,7 +88,7 @@ func (c *redisCache) Get(ctx context.Context, productID string) (int, bool, erro
 func (c *redisCache) Set(ctx context.Context, productID string, available int) error {
 	err := c.client.Set(ctx, cacheKey(productID), available, c.ttl).Err()
 	if err != nil {
-		return fmt.Errorf("Cache set: %w", err)
+		return fmt.Errorf("cache set: %w", err)
 	}
 	return nil
 }

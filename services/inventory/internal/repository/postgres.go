@@ -45,7 +45,7 @@ func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, erro
 			&p.CreatedAt, &p.UpdatedAt,
 		)
 		if err != nil {
-			return nil, fmt.Errorf("Scan products: %w", err)
+		return nil, fmt.Errorf("scan products: %w", err)
 		}
 		products = append(products, p)
 	}
@@ -156,9 +156,8 @@ func (r *postgresStockRepo) Reserve(ctx context.Context, productID string, quant
 	}
 	// defer Rollback — runs automatically if we return before Commit.
 	// If Commit() already ran successfully, Rollback() is a safe no-op.
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
-	// SELECT FOR UPDATE — acquires a row-level lock.
 	// Other transactions trying this query WAIT here until we COMMIT.
 	// This serialises concurrent access to this product's stock row.
 	var currentQuantity, currentReserved int
@@ -209,7 +208,7 @@ func (r *postgresStockRepo) Release(ctx context.Context, productID string, quant
 	if err != nil {
 		return fmt.Errorf("begin transaction: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	// Lock the row before modifying reserved count
 	var currentReserved int

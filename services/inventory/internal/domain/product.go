@@ -88,8 +88,8 @@ func (p *ProductWithStock) ToResponse() *ProductResponse {
 // Called by Order Service when a customer places an order.
 type ReserveRequest struct {
 	ProductID string `json:"product_id" validate:"required,uuid4"`
-	Quantity  int    `json:"quantity" 	validate:"required,min=1"`
-	OrderID   string `json:"order_id" 	validate:"required,uuid4"`
+	Quantity  int    `json:"quantity" validate:"required,min=1"`
+	OrderID   string `json:"order_id" validate:"required,uuid4"`
 }
 
 // ReleaseRequest is the body for POST /inventory/release
