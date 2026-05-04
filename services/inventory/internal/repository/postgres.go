@@ -45,7 +45,7 @@ func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, erro
 			&p.CreatedAt, &p.UpdatedAt,
 		)
 		if err != nil {
-		return nil, fmt.Errorf("scan products: %w", err)
+			return nil, fmt.Errorf("scan products: %w", err)
 		}
 		products = append(products, p)
 	}
