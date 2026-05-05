@@ -70,6 +70,16 @@ func (m *mockUserRepo) UpdateRole(ctx context.Context, userID, role string) erro
 	return nil
 }
 
+func (m *mockUserRepo) UpdatePassword(ctx context.Context, userID, passwordHash string) error {
+	for _, user := range m.users {
+		if user.ID == userID {
+			user.PasswordHash = passwordHash
+			return nil
+		}
+	}
+	return nil
+}
+
 type mockTokenRepo struct {
 	tokens map[string]string // token → userID
 }
