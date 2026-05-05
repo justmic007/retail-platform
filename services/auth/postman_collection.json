@@ -432,6 +432,23 @@
                     "name": "Promote User — invalid role (should 400)",
                     "event": [
                         {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Log in as admin to get a fresh token — validation runs after auth,",
+                                    "// so we need a valid admin token for the 400 to be reached.",
+                                    "pm.sendRequest({",
+                                    "    url: pm.environment.get('auth_base_url') + '/auth/login',",
+                                    "    method: 'POST',",
+                                    "    header: { 'Content-Type': 'application/json' },",
+                                    "    body: { mode: 'raw', raw: JSON.stringify({ email: 'admin@retailplatform.com', password: 'Admin@123456' }) }",
+                                    "}, function(err, res) {",
+                                    "    pm.environment.set('admin_token', res.json().access_token);",
+                                    "});"
+                                ]
+                            }
+                        },
+                        {
                             "listen": "test",
                             "script": {
                                 "exec": [
@@ -442,7 +459,9 @@
                                     "pm.test('Validation error mentions role field', function() {",
                                     "    const body = pm.response.json();",
                                     "    pm.expect(body.error).to.include('role');",
-                                    "});"
+                                    "});",
+                                    "",
+                                    "pm.environment.unset('admin_token');"
                                 ]
                             }
                         }
@@ -453,7 +472,8 @@
                         "header": [
                             {
                                 "key": "Authorization",
-                                "value": "Bearer {{access_token}}"
+                                "value": "Bearer {{admin_token}}",
+                                "description": "Populated by pre-request script — fresh admin token every run."
                             },
                             {
                                 "key": "Content-Type",
@@ -464,12 +484,30 @@
                             "mode": "raw",
                             "raw": "{\n  \"role\": \"superuser\"\n}"
                         },
-                        "description": "Only 'admin' and 'customer' are valid roles. Anything else returns 400."
+                        "description": "Only 'admin' and 'customer' are valid roles. Anything else returns 400.\n\nThe pre-request script logs in as admin automatically so the request reaches validation (not auth)."
                     }
                 },
                 {
                     "name": "Promote User — customer token (should 403)",
                     "event": [
+                        {
+                            "listen": "prerequest",
+                            "script": {
+                                "exec": [
+                                    "// Log in as a customer to get a fresh customer token.",
+                                    "// This ensures we're testing with role=customer regardless of",
+                                    "// what access_token currently holds in the environment.",
+                                    "pm.sendRequest({",
+                                    "    url: pm.environment.get('auth_base_url') + '/auth/login',",
+                                    "    method: 'POST',",
+                                    "    header: { 'Content-Type': 'application/json' },",
+                                    "    body: { mode: 'raw', raw: JSON.stringify({ email: 'micah@example.com', password: 'securepassword123' }) }",
+                                    "}, function(err, res) {",
+                                    "    pm.environment.set('customer_token', res.json().access_token);",
+                                    "});"
+                                ]
+                            }
+                        },
                         {
                             "listen": "test",
                             "script": {
@@ -481,7 +519,9 @@
                                     "pm.test('Error code is FORBIDDEN', function() {",
                                     "    const body = pm.response.json();",
                                     "    pm.expect(body.code).to.equal('FORBIDDEN');",
-                                    "});"
+                                    "});",
+                                    "",
+                                    "pm.environment.unset('customer_token');"
                                 ]
                             }
                         }
@@ -492,8 +532,8 @@
                         "header": [
                             {
                                 "key": "Authorization",
-                                "value": "Bearer {{access_token}}",
-                                "description": "Use a customer token here to verify 403 is returned."
+                                "value": "Bearer {{customer_token}}",
+                                "description": "Populated by pre-request script — always a fresh customer token."
                             },
                             {
                                 "key": "Content-Type",
@@ -504,7 +544,7 @@
                             "mode": "raw",
                             "raw": "{\n  \"role\": \"admin\"\n}"
                         },
-                        "description": "A customer JWT cannot call this endpoint. Verifies RequireRole middleware blocks non-admins."
+                        "description": "A customer JWT cannot call this endpoint. Verifies RequireRole middleware blocks non-admins.\n\nThe pre-request script logs in as micah@example.com automatically — no need to manually set a customer token."
                     }
                 },
                 {
