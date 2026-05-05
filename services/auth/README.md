@@ -524,8 +524,10 @@ Service starts on `http://localhost:8080`
 A ready-to-use Postman collection is included at `postman_collection.json`.
 
 **Import it:**
-1. Open Postman → **Import** → select `services/auth/postman_collection.json`
-2. The `base_url` variable is pre-set to `http://localhost:8080`
+1. Open Postman → **Import** → select `postman_environment.json` from the repo root
+2. Import `services/auth/postman_collection.json`
+3. Select **Retail Platform — Local** as the active environment
+4. The `auth_base_url` is pre-set to `http://localhost:8080`
 
 **Recommended order:**
 1. **Register** — creates a user

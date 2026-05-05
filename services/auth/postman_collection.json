@@ -1,24 +1,14 @@
 {
     "info": {
-        "name": "Retail Platform — Auth Service",
-        "description": "Complete API collection for the Auth Service. Import this into Postman and set the `base_url` variable to test all endpoints.\n\n**Setup:**\n1. Import this collection\n2. Set `base_url` variable to `http://localhost:8080`\n3. Run Register → Login (access_token auto-saves) → test protected routes",
+        "name": "Retail Platform \u2014 Auth Service",
+        "description": "Complete API collection for the Auth Service. Import this into Postman and set the `base_url` variable to test all endpoints.\n\n**Setup:**\n1. Import this collection\n2. Set `base_url` variable to `http://localhost:8080`\n3. Run Register \u2192 Login (access_token auto-saves) \u2192 test protected routes",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
         {
             "key": "base_url",
-            "value": "http://localhost:8080",
-            "description": "Auth Service base URL. Change to deployed URL for production testing."
-        },
-        {
-            "key": "access_token",
-            "value": "",
-            "description": "JWT access token — auto-populated after Login request"
-        },
-        {
-            "key": "refresh_token",
-            "value": "",
-            "description": "Refresh token — auto-populated after Login request"
+            "value": "{{auth_base_url}}",
+            "description": "Resolved from the Retail Platform environment"
         }
     ],
     "item": [
@@ -120,13 +110,13 @@
                             "body": "{\n  \"user\": {\n    \"id\": \"5fc1d649-2a76-49f5-94a8-54a4bc2e7873\",\n    \"email\": \"micah@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-04-26T03:44:29.059418+01:00\"\n  }\n}"
                         },
                         {
-                            "name": "400 Bad Request — validation error",
+                            "name": "400 Bad Request \u2014 validation error",
                             "status": "Bad Request",
                             "code": 400,
                             "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"error\": \"field 'email' failed validation: email\"\n}"
                         },
                         {
-                            "name": "409 Conflict — email taken",
+                            "name": "409 Conflict \u2014 email taken",
                             "status": "Conflict",
                             "code": 409,
                             "body": "{\n  \"code\": \"CONFLICT\",\n  \"error\": \"an account with this email already exists\"\n}"
@@ -156,11 +146,11 @@
                                     "// These are used automatically by protected route requests",
                                     "const body = pm.response.json();",
                                     "if (body.access_token) {",
-                                    "    pm.collectionVariables.set('access_token', body.access_token);",
+                                    "    pm.environment.set('access_token', body.access_token);",
                                     "    console.log('access_token saved to collection variables');",
                                     "}",
                                     "if (body.refresh_token) {",
-                                    "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                                    "    pm.environment.set('refresh_token', body.refresh_token);",
                                     "    console.log('refresh_token saved to collection variables');",
                                     "}",
                                     "",
@@ -185,7 +175,7 @@
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"micah@example.com\",\n  \"password\": \"securepassword123\"\n}"
                         },
-                        "description": "Authenticate a user and receive JWT tokens.\n\n**Returns:**\n- `access_token`: JWT valid for 15 minutes. Include in Authorization header for protected routes.\n- `refresh_token`: Random token valid for 7 days. Use to get a new access token when it expires.\n- `expires_in`: Seconds until access token expires (900 = 15 minutes)\n\n**Security:** Returns identical error for wrong email AND wrong password — prevents user enumeration.\n\n**Note:** The test script automatically saves tokens to collection variables."
+                        "description": "Authenticate a user and receive JWT tokens.\n\n**Returns:**\n- `access_token`: JWT valid for 15 minutes. Include in Authorization header for protected routes.\n- `refresh_token`: Random token valid for 7 days. Use to get a new access token when it expires.\n- `expires_in`: Seconds until access token expires (900 = 15 minutes)\n\n**Security:** Returns identical error for wrong email AND wrong password \u2014 prevents user enumeration.\n\n**Note:** The test script automatically saves tokens to collection variables."
                     },
                     "response": [
                         {
@@ -195,7 +185,7 @@
                             "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"58f1dbdb8d7bd42c7d02c87562fdf8d5...\",\n  \"expires_in\": 900\n}"
                         },
                         {
-                            "name": "401 Unauthorized — wrong credentials",
+                            "name": "401 Unauthorized \u2014 wrong credentials",
                             "status": "Unauthorized",
                             "code": 401,
                             "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid email or password\"\n}"
@@ -213,13 +203,13 @@
                                     "    pm.response.to.have.status(200);",
                                     "});",
                                     "",
-                                    "// Save new tokens — old ones are now invalid",
+                                    "// Save new tokens \u2014 old ones are now invalid",
                                     "const body = pm.response.json();",
                                     "if (body.access_token) {",
-                                    "    pm.collectionVariables.set('access_token', body.access_token);",
+                                    "    pm.environment.set('access_token', body.access_token);",
                                     "}",
                                     "if (body.refresh_token) {",
-                                    "    pm.collectionVariables.set('refresh_token', body.refresh_token);",
+                                    "    pm.environment.set('refresh_token', body.refresh_token);",
                                     "}",
                                     "",
                                     "pm.test('New refresh token is different from old one (token rotation)', function() {",
@@ -247,13 +237,13 @@
                     },
                     "response": [
                         {
-                            "name": "200 OK — new tokens issued",
+                            "name": "200 OK \u2014 new tokens issued",
                             "status": "OK",
                             "code": 200,
                             "body": "{\n  \"access_token\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...\",\n  \"refresh_token\": \"new_refresh_token_here...\",\n  \"expires_in\": 900\n}"
                         },
                         {
-                            "name": "401 Unauthorized — invalid token",
+                            "name": "401 Unauthorized \u2014 invalid token",
                             "status": "Unauthorized",
                             "code": 401,
                             "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid or malformed token\"\n}"
@@ -306,13 +296,13 @@
                             "body": "{\n  \"user\": {\n    \"id\": \"5fc1d649-2a76-49f5-94a8-54a4bc2e7873\",\n    \"email\": \"micah@example.com\",\n    \"role\": \"customer\",\n    \"created_at\": \"2026-04-26T03:44:29.059418+01:00\"\n  }\n}"
                         },
                         {
-                            "name": "401 Unauthorized — no token",
+                            "name": "401 Unauthorized \u2014 no token",
                             "status": "Unauthorized",
                             "code": 401,
                             "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"authorization header is required\"\n}"
                         },
                         {
-                            "name": "401 Unauthorized — expired token",
+                            "name": "401 Unauthorized \u2014 expired token",
                             "status": "Unauthorized",
                             "code": 401,
                             "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid or expired token\"\n}"
@@ -331,8 +321,8 @@
                                     "});",
                                     "",
                                     "// Clear saved tokens after logout",
-                                    "pm.collectionVariables.set('access_token', '');",
-                                    "pm.collectionVariables.set('refresh_token', '');",
+                                    "pm.environment.set('access_token', '');",
+                                    "pm.environment.set('refresh_token', '');",
                                     "console.log('Tokens cleared from collection variables');"
                                 ]
                             }
@@ -355,7 +345,7 @@
                             "mode": "raw",
                             "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
                         },
-                        "description": "Invalidate the refresh token.\n\n**Why send refresh_token in the body?**\nJWTs (access tokens) are stateless — they cannot be revoked server-side. Only the refresh token is stored in the database and can be deleted. Logout works by deleting the refresh_token row.\n\n**After logout:** The access token remains valid until it expires (max 15 minutes). The refresh token is immediately invalid — the user cannot get new access tokens without logging in again."
+                        "description": "Invalidate the refresh token.\n\n**Why send refresh_token in the body?**\nJWTs (access tokens) are stateless \u2014 they cannot be revoked server-side. Only the refresh token is stored in the database and can be deleted. Logout works by deleting the refresh_token row.\n\n**After logout:** The access token remains valid until it expires (max 15 minutes). The refresh token is immediately invalid \u2014 the user cannot get new access tokens without logging in again."
                     },
                     "response": [
                         {
@@ -370,7 +360,7 @@
         },
         {
             "name": "Security Tests",
-            "description": "Tests that verify security behaviour — these should all return errors.",
+            "description": "Tests that verify security behaviour \u2014 these should all return errors.",
             "item": [
                 {
                     "name": "Access protected route without token",
@@ -394,7 +384,7 @@
                     "request": {
                         "method": "GET",
                         "url": "{{base_url}}/auth/me",
-                        "description": "Should return 401 — no Authorization header sent."
+                        "description": "Should return 401 \u2014 no Authorization header sent."
                     }
                 },
                 {
@@ -408,10 +398,10 @@
                                     "    pm.response.to.have.status(401);",
                                     "});",
                                     "",
-                                    "pm.test('Error is generic — does not reveal if email exists', function() {",
+                                    "pm.test('Error is generic \u2014 does not reveal if email exists', function() {",
                                     "    const body = pm.response.json();",
                                     "    pm.expect(body.error).to.equal('invalid email or password');",
-                                    "    // IMPORTANT: same message as wrong email — prevents user enumeration",
+                                    "    // IMPORTANT: same message as wrong email \u2014 prevents user enumeration",
                                     "});"
                                 ]
                             }
@@ -430,7 +420,7 @@
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"micah@example.com\",\n  \"password\": \"wrongpassword\"\n}"
                         },
-                        "description": "Verify that wrong password returns generic error — not 'wrong password' specifically."
+                        "description": "Verify that wrong password returns generic error \u2014 not 'wrong password' specifically."
                     }
                 },
                 {
@@ -444,7 +434,7 @@
                                     "    pm.response.to.have.status(401);",
                                     "});",
                                     "",
-                                    "pm.test('Same error as wrong password — user enumeration prevented', function() {",
+                                    "pm.test('Same error as wrong password \u2014 user enumeration prevented', function() {",
                                     "    const body = pm.response.json();",
                                     "    pm.expect(body.error).to.equal('invalid email or password');",
                                     "});"
@@ -524,7 +514,7 @@
                             "mode": "raw",
                             "raw": "{\n  \"email\": \"test@example.com\",\n  \"password\": \"short\"\n}"
                         },
-                        "description": "Password minimum is 8 characters — this should return 400."
+                        "description": "Password minimum is 8 characters \u2014 this should return 400."
                     }
                 }
             ]

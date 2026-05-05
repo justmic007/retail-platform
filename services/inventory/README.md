@@ -15,6 +15,7 @@ Production-grade inventory management service built in Go. Manages the product c
 - [Database Schema](#database-schema)
 - [API Reference](#api-reference)
 - [Running Locally](#running-locally)
+- [Postman Collection](#postman-collection)
 - [Running Tests](#running-tests)
 - [Environment Variables](#environment-variables)
 - [Key Design Decisions](#key-design-decisions)
@@ -694,6 +695,26 @@ make run-inventory
 ```
 
 Service starts on `http://localhost:8082`
+
+---
+
+## Postman Collection
+
+A ready-to-use Postman collection is included at `postman_collection.json`.
+
+**Import it:**
+1. Open Postman → **Import** → select `postman_environment.json` from the repo root
+2. Import `services/inventory/postman_collection.json`
+3. Select **Retail Platform — Local** as the active environment
+4. Set `access_token` by running Login in the Auth Service collection first — it saves to the shared environment automatically
+
+**Recommended order:**
+1. **List All Products** — saves `product_id` automatically from the first result
+2. **Get Stock Level** — verify current stock before reserving
+3. **Reserve Stock** — locks 5 units
+4. **Get Stock Level** again — confirm available dropped by 5
+5. **Release Stock** — returns the 5 units
+6. **Security Tests** folder — verifies auth is enforced on all endpoints
 
 ---
 

@@ -21,26 +21,27 @@ func NewRouter(h *handler.InventoryHandler, jwtManager *jwt.Manager) *gin.Engine
 	r.GET("/health", h.Health)
 	r.GET("/ready", h.Ready)
 
+	// PUBLIC — no auth required (browsing the product catalogue)
+	r.GET("/products", h.ListProducts)
+	r.GET("/products/:id", h.GetProduct)
+	r.GET("/products/:id/stock", h.GetStockLevel)
+
 	// All inventory routes require a valid JWT
 	// The JWT is issued by Auth Service — same secret
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware(jwtManager))
 	{
-		// Product catalogue — any authenticated user
-		protected.GET("/products", h.ListProducts)
-		protected.GET("/products/:id", h.GetProduct)
-		protected.GET("/products/:id/stock", h.GetStockLevel)
-
 		// Stock operations — any authenticated user (Order Service calls these)
 		protected.POST("/inventory/reserve", h.Reserve)
 		protected.POST("/inventory/release", h.Release)
 
-		// Stock adjustment — admin only
-		// RequireRole must come AFTER AuthMiddleware
-		protected.PATCH("/products/:id/stock",
-			middleware.RequireRole("admin"),
-			h.AdjustStock,
-		)
+		// ADMIN — JWT + admin role required
+		admin := r.Group("/")
+		admin.Use(middleware.AuthMiddleware(jwtManager))
+		admin.Use(middleware.RequireRole("admin"))
+		{
+			admin.PATCH("/products/:id/stock", h.AdjustStock)
+		}
 	}
 
 	return r

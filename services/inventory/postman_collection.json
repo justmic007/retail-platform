@@ -1,0 +1,722 @@
+{
+    "info": {
+        "name": "Retail Platform \u2014 Inventory Service",
+        "description": "Complete API collection for the Inventory Service.\n\n**Setup:**\n1. Import this collection\n2. Import the Auth Service collection and run Login \u2014 access_token is shared\n3. Set `base_url` to `http://localhost:8082`\n4. Run `make run-auth` and `make run-inventory`\n5. Run `make migrate-inventory` to seed the database with products",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "{{inventory_base_url}}",
+            "description": "Resolved from the Retail Platform environment"
+        },
+        {
+            "key": "product_id",
+            "value": "a1b2c3d4-0001-0001-0001-000000000001",
+            "description": "Sunflower Oil 2L \u2014 seeded product ID"
+        },
+        {
+            "key": "order_id",
+            "value": "00000000-0000-0000-0000-000000000001",
+            "description": "Test order ID used for reserve/release requests"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/health",
+                        "description": "Liveness probe. Returns 200 if the service process is running."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test('Service is inventory', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.service).to.equal('inventory');",
+                                    "    pm.expect(body.status).to.equal('ok');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"service\": \"inventory\",\n  \"status\": \"ok\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Readiness Check",
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/ready",
+                        "description": "Readiness probe. Returns 200 if the service is ready to handle traffic."
+                    },
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Products",
+            "item": [
+                {
+                    "name": "List All Products",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has products array and total', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('products');",
+                                    "    pm.expect(body).to.have.property('total');",
+                                    "    pm.expect(body.products).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('Each product has stock fields', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    body.products.forEach(p => {",
+                                    "        pm.expect(p).to.have.property('id');",
+                                    "        pm.expect(p).to.have.property('sku');",
+                                    "        pm.expect(p).to.have.property('name');",
+                                    "        pm.expect(p).to.have.property('price');",
+                                    "        pm.expect(p).to.have.property('quantity');",
+                                    "        pm.expect(p).to.have.property('reserved');",
+                                    "        pm.expect(p).to.have.property('available');",
+                                    "    });",
+                                    "});",
+                                    "",
+                                    "// Save first product ID for use in other requests",
+                                    "const body = pm.response.json();",
+                                    "if (body.products && body.products.length > 0) {",
+                                    "    pm.collectionVariables.set('product_id', body.products[0].id);",
+                                    "    console.log('product_id saved:', body.products[0].id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Returns all active products with stock levels. Always queries Postgres directly \u2014 bypasses Redis cache."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"products\": [\n    {\n      \"id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n      \"sku\": \"OIL-SF-2L\",\n      \"name\": \"Sunflower Oil 2L\",\n      \"description\": \"Pure sunflower cooking oil\",\n      \"price\": 89.99,\n      \"category\": \"Groceries\",\n      \"is_active\": true,\n      \"quantity\": 150,\n      \"reserved\": 0,\n      \"available\": 150\n    }\n  ],\n  \"total\": 5\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Product by ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has product object with stock', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('product');",
+                                    "    pm.expect(body.product).to.have.property('id');",
+                                    "    pm.expect(body.product).to.have.property('sku');",
+                                    "    pm.expect(body.product).to.have.property('available');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products/{{product_id}}",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Returns a single product with full stock level. Uses Redis cache for the stock level."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"product\": {\n    \"id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n    \"sku\": \"OIL-SF-2L\",\n    \"name\": \"Sunflower Oil 2L\",\n    \"description\": \"Pure sunflower cooking oil\",\n    \"price\": 89.99,\n    \"category\": \"Groceries\",\n    \"is_active\": true,\n    \"quantity\": 150,\n    \"reserved\": 0,\n    \"available\": 150\n  }\n}"
+                        },
+                        {
+                            "name": "404 Not Found",
+                            "status": "Not Found",
+                            "code": 404,
+                            "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"error\": \"product not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Stock Level",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has stock fields', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('product_id');",
+                                    "    pm.expect(body).to.have.property('quantity');",
+                                    "    pm.expect(body).to.have.property('reserved');",
+                                    "    pm.expect(body).to.have.property('available');",
+                                    "});",
+                                    "",
+                                    "pm.test('Available is non-negative', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.available).to.be.at.least(0);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products/{{product_id}}/stock",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Returns just the stock level for a product. Uses Redis cache.\n\n**Note:** on a cache hit, `reserved` is returned as `0` \u2014 only `available` is cached. Use GET /products/:id for the authoritative breakdown."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n  \"quantity\": 150,\n  \"reserved\": 0,\n  \"available\": 150\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Product \u2014 Not Found",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 404 for unknown product', function() {",
+                                    "    pm.response.to.have.status(404);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is NOT_FOUND', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('NOT_FOUND');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products/00000000-0000-0000-0000-000000000000",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Verifies 404 is returned for a product that doesn't exist."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Stock Operations",
+            "item": [
+                {
+                    "name": "Reserve Stock",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response confirms reservation', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('product_id');",
+                                    "    pm.expect(body).to.have.property('reserved');",
+                                    "    pm.expect(body).to.have.property('available');",
+                                    "    pm.expect(body.message).to.equal('stock reserved successfully');",
+                                    "});",
+                                    "",
+                                    "pm.test('Reserved count is positive', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.reserved).to.be.above(0);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/reserve",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 5,\n  \"order_id\": \"{{order_id}}\"\n}"
+                        },
+                        "description": "Locks N units of a product for an order. Uses SELECT FOR UPDATE to prevent overselling.\n\nRun this then immediately check GET /products/:id/stock \u2014 the available count will have decreased by 5."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n  \"reserved\": 5,\n  \"available\": 145,\n  \"message\": \"stock reserved successfully\"\n}"
+                        },
+                        {
+                            "name": "409 Insufficient Stock",
+                            "status": "Conflict",
+                            "code": 409,
+                            "body": "{\n  \"code\": \"INSUFFICIENT_STOCK\",\n  \"error\": \"Insufficient stock available for this product\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Release Stock",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response confirms release', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.message).to.equal('stock released successfully');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/release",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 5,\n  \"order_id\": \"{{order_id}}\"\n}"
+                        },
+                        "description": "Returns previously reserved units back to available. Run this after Reserve Stock to undo the reservation."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"stock released successfully\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Reserve \u2014 Insufficient Stock",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 409 for insufficient stock', function() {",
+                                    "    pm.response.to.have.status(409);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is INSUFFICIENT_STOCK', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('INSUFFICIENT_STOCK');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/reserve",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 99999,\n  \"order_id\": \"{{order_id}}\"\n}"
+                        },
+                        "description": "Verifies that requesting more stock than available returns 409 INSUFFICIENT_STOCK."
+                    }
+                },
+                {
+                    "name": "Reserve \u2014 Invalid Request",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for missing fields', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/reserve",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\"\n}"
+                        },
+                        "description": "Verifies that missing quantity and order_id returns 400."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "item": [
+                {
+                    "name": "Adjust Stock (Admin only)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK or 403 Forbidden', function() {",
+                                    "    pm.expect([200, 403]).to.include(pm.response.code);",
+                                    "});",
+                                    "",
+                                    "if (pm.response.code === 403) {",
+                                    "    pm.test('Returns 403 for non-admin user', function() {",
+                                    "        const body = pm.response.json();",
+                                    "        pm.expect(body.code).to.equal('FORBIDDEN');",
+                                    "    });",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/products/{{product_id}}/stock",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quantity\": 200,\n  \"reason\": \"New delivery from supplier\"\n}"
+                        },
+                        "description": "Manually sets the total quantity for a product. Requires admin role.\n\nIf your token is for a customer role, this returns 403 Forbidden \u2014 which is the correct behaviour."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK \u2014 admin user",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"stock adjusted successfully\"\n}"
+                        },
+                        {
+                            "name": "403 Forbidden \u2014 customer user",
+                            "status": "Forbidden",
+                            "code": 403,
+                            "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"error\": \"insufficient permissions\"\n}"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "name": "Security Tests",
+            "item": [
+                {
+                    "name": "Access without token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products",
+                        "description": "All inventory endpoints require a JWT. This verifies 401 is returned without one."
+                    }
+                },
+                {
+                    "name": "Access with invalid token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 for invalid token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/products",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer this.is.not.a.valid.token"
+                            }
+                        ],
+                        "description": "Verifies that a malformed or tampered JWT returns 401."
+                    }
+                },
+                {
+                    "name": "Reserve without token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/reserve",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 5,\n  \"order_id\": \"{{order_id}}\"\n}"
+                        },
+                        "description": "Verifies that reserve returns 401 without a token."
+                    }
+                },
+                {
+                    "name": "Release without token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/inventory/release",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"product_id\": \"{{product_id}}\",\n  \"quantity\": 5,\n  \"order_id\": \"{{order_id}}\"\n}"
+                        },
+                        "description": "Verifies that release returns 401 without a token."
+                    }
+                },
+                {
+                    "name": "Adjust Stock without token",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/products/{{product_id}}/stock",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quantity\": 200,\n  \"reason\": \"test\"\n}"
+                        },
+                        "description": "Verifies that adjust stock returns 401 without a token."
+                    }
+                },
+                {
+                    "name": "Adjust Stock as customer (not admin)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 403 for non-admin user', function() {",
+                                    "    pm.response.to.have.status(403);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is FORBIDDEN', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('FORBIDDEN');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/products/{{product_id}}/stock",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"quantity\": 200,\n  \"reason\": \"test\"\n}"
+                        },
+                        "description": "Verifies that a logged-in customer cannot adjust stock \u2014 admin role required."
+                    }
+                }
+            ]
+        }
+    ]
+}
