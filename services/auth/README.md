@@ -459,6 +459,31 @@ Invalidates the refresh token. Access token remains valid until expiry (15m).
 
 ---
 
+### POST /auth/change-password 🔒
+
+Changes the authenticated user's password. Requires the current password for verification. Invalidates all refresh tokens after a successful change — forces re-login on all devices.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request:**
+```json
+{
+  "current_password": "securepassword123",
+  "new_password": "newpassword456"
+}
+```
+
+**Response 200:**
+```json
+{
+  "message": "password changed successfully — please log in again on all devices"
+}
+```
+
+**Errors:** `400` new password too short (min 8 chars) · `401` wrong current password or missing token
+
+---
+
 ### PATCH /auth/users/:id/role 🔒 Admin only
 
 Promotes or demotes a user's role. Requires an admin JWT.

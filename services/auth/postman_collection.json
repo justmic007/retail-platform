@@ -360,6 +360,173 @@
                             "body": "{\n  \"message\": \"logged out successfully\"\n}"
                         }
                     ]
+                },
+                {
+                    "name": "Change Password",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response confirms password change', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.message).to.include('password changed successfully');",
+                                    "});",
+                                    "",
+                                    "// Clear tokens — all sessions are now invalidated",
+                                    "pm.environment.set('access_token', '');",
+                                    "pm.environment.set('refresh_token', '');",
+                                    "console.log('Tokens cleared — all sessions terminated after password change');"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/change-password",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"current_password\": \"securepassword123\",\n  \"new_password\": \"newpassword456\"\n}"
+                        },
+                        "description": "Changes the authenticated user's password.\n\n**Requires:** Valid JWT in Authorization header.\n\n**Security:** Current password must be verified before the change is allowed. All refresh tokens are invalidated after a successful change — the user is logged out on all devices. They must log in again with the new password."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"password changed successfully — please log in again on all devices\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request — new password too short",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "body": "{\n  \"error\": \"field 'newpassword' failed validation: min\"\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized — wrong current password",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"invalid email or password\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Change Password — wrong current password (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 for wrong current password', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/change-password",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"current_password\": \"wrongpassword\",\n  \"new_password\": \"newpassword456\"\n}"
+                        },
+                        "description": "Verifies that the current password must be correct before a change is allowed."
+                    }
+                },
+                {
+                    "name": "Change Password — new password too short (should 400)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for short new password', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/change-password",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"current_password\": \"securepassword123\",\n  \"new_password\": \"short\"\n}"
+                        },
+                        "description": "New password minimum is 8 characters — this should return 400."
+                    }
+                },
+                {
+                    "name": "Change Password — no token (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/auth/change-password",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"current_password\": \"securepassword123\",\n  \"new_password\": \"newpassword456\"\n}"
+                        },
+                        "description": "Verifies that AuthMiddleware blocks unauthenticated requests."
+                    }
                 }
             ]
         },

@@ -157,6 +157,15 @@ func (r *postgresUserRepo) UpdateRole(ctx context.Context, userID, role string) 
 	return err
 }
 
+// Update password implementation
+func (r *postgresUserRepo) UpdatePassword(ctx context.Context, userID, hash string) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+		hash, userID,
+	)
+	return err
+}
+
 // ── Token Repository ──────────────────────────────────────────────────────────
 
 type postgresTokenRepo struct {

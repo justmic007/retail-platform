@@ -35,6 +35,12 @@ type User struct {
 	UpdatedAt    time.Time
 }
 
+// ChangePasswordRequest is the body for POST /auth/change-password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password"     validate:"required,min=8"`
+}
+
 // UserResponse is what gets sent to the client in API responses.
 // It deliberately has no PasswordHash field — it physically cannot
 // be included in a response because it doesn't exist on this struct.

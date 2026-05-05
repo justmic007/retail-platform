@@ -255,3 +255,28 @@ func (h *AuthHandler) PromoteUser(c *gin.Context) {
 		"message": fmt.Sprintf("user role updated to %s", req.Role),
 	})
 }
+
+// Change password handler
+func (h *AuthHandler) ChangePassword(c *gin.Context) {
+	userID := c.GetString(middleware.UserIDKey)
+
+	var req domain.ChangePasswordRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.validator.Validate(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.ChangePassword(c.Request.Context(), userID, req); err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": "password changed successfully — please log in again on all devices",
+	})
+}
