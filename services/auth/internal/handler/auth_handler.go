@@ -5,6 +5,7 @@
 package handler
 
 import (
+	"fmt"
 	"net/http"
 
 	"retail-platform/auth/internal/domain"
@@ -226,5 +227,31 @@ func (h *AuthHandler) handleError(c *gin.Context, err error) {
 	c.JSON(http.StatusInternalServerError, gin.H{
 		"error": "an internal error occurred",
 		"code":  "INTERNAL_ERROR",
+	})
+}
+
+// PromoteUser handles PATCH /auth/users/:id/role
+// Admin only — promotes or demotes a user's role.
+func (h *AuthHandler) PromoteUser(c *gin.Context) {
+	userID := c.Param("id")
+
+	var req domain.PromoteRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body"})
+		return
+	}
+
+	if err := h.validator.Validate(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if err := h.service.PromoteUser(c.Request.Context(), userID, req.Role); err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message": fmt.Sprintf("user role updated to %s", req.Role),
 	})
 }

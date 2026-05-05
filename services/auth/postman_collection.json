@@ -9,6 +9,11 @@
             "key": "base_url",
             "value": "{{auth_base_url}}",
             "description": "Resolved from the Retail Platform environment"
+        },
+        {
+            "key": "user_id",
+            "value": "",
+            "description": "ID of the user to promote/demote. Set this after running Register or List users."
         }
     ],
     "item": [
@@ -355,6 +360,187 @@
                             "body": "{\n  \"message\": \"logged out successfully\"\n}"
                         }
                     ]
+                }
+            ]
+        },
+        {
+            "name": "Admin",
+            "description": "Admin-only endpoints. Requires a JWT with role=admin.",
+            "item": [
+                {
+                    "name": "Promote User",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response confirms role update', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('message');",
+                                    "    pm.expect(body.message).to.include('user role updated to');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/auth/users/{{user_id}}/role",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "description": "Must be an admin JWT. Login as admin@retailplatform.com first."
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"role\": \"admin\"\n}"
+                        },
+                        "description": "Promotes or demotes a user's role.\n\n**Valid roles:** `admin` · `customer`\n\n**Requires:** Admin JWT in Authorization header.\n\n**Note:** Role changes take effect on the user's next login — the current access token encodes the role at issue time and remains valid until it expires (15m)."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"user role updated to admin\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request — invalid role",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "body": "{\n  \"error\": \"field 'role' failed validation: oneof\"\n}"
+                        },
+                        {
+                            "name": "403 Forbidden — not an admin",
+                            "status": "Forbidden",
+                            "code": 403,
+                            "body": "{\n  \"code\": \"FORBIDDEN\",\n  \"error\": \"insufficient permissions\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Promote User — invalid role (should 400)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for invalid role', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Validation error mentions role field', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.error).to.include('role');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/auth/users/{{user_id}}/role",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"role\": \"superuser\"\n}"
+                        },
+                        "description": "Only 'admin' and 'customer' are valid roles. Anything else returns 400."
+                    }
+                },
+                {
+                    "name": "Promote User — customer token (should 403)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 403 for non-admin token', function() {",
+                                    "    pm.response.to.have.status(403);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is FORBIDDEN', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('FORBIDDEN');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/auth/users/{{user_id}}/role",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}",
+                                "description": "Use a customer token here to verify 403 is returned."
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"role\": \"admin\"\n}"
+                        },
+                        "description": "A customer JWT cannot call this endpoint. Verifies RequireRole middleware blocks non-admins."
+                    }
+                },
+                {
+                    "name": "Promote User — no token (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/auth/users/{{user_id}}/role",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"role\": \"admin\"\n}"
+                        },
+                        "description": "No Authorization header — verifies AuthMiddleware blocks unauthenticated requests."
+                    }
                 }
             ]
         },

@@ -241,3 +241,11 @@ func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*domain.U
 	}
 	return user, nil
 }
+
+func (s *AuthService) PromoteUser(ctx context.Context, userID, role string) error {
+	if err := s.userRepo.UpdateRole(ctx, userID, role); err != nil {
+		return fmt.Errorf("promote user: %w", err)
+	}
+	s.log.Info().Str("user_id", userID).Str("role", role).Msg("user role updated")
+	return nil
+}

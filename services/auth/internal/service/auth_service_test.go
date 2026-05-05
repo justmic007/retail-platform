@@ -60,6 +60,16 @@ func (m *mockUserRepo) FindByID(ctx context.Context, id string) (*domain.User, e
 	return nil, domain.ErrInvalidCredentials
 }
 
+func (m *mockUserRepo) UpdateRole(ctx context.Context, userID, role string) error {
+	for _, user := range m.users {
+		if user.ID == userID {
+			user.Role = domain.Role(role)
+			return nil
+		}
+	}
+	return nil
+}
+
 type mockTokenRepo struct {
 	tokens map[string]string // token → userID
 }
