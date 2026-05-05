@@ -36,6 +36,12 @@ type UserRepository interface {
 	// Used in the /me endpoint — get the current user's profile.
 	// Returns domain.ErrNotFound if no user has that ID.
 	FindByID(ctx context.Context, id string) (*domain.User, error)
+
+	// UpdateRole updates the role of a user.
+	UpdateRole(ctx context.Context, userID, role string) error
+
+	// Change password interface
+	UpdatePassword(ctx context.Context, userID, passwordHash string) error
 }
 
 // TokenRepository defines all database operations for refresh tokens.

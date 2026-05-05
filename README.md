@@ -62,13 +62,14 @@ make run-auth
 
 ## Testing the API
 
-A Postman collection is included at `services/auth/postman_collection.json`.
+A shared Postman environment and per-service collections are included.
 
-**To use it:**
-1. Open Postman → **Import** → select `postman_collection.json`
-2. Start the auth service with `make run-auth`
-3. Run **Register** then **Login** — tokens are saved automatically
-4. All other requests use the saved tokens
+**To use them:**
+1. Open Postman → **Import** → select `postman_environment.json`
+2. Import `services/auth/postman_collection.json`
+3. Import `services/inventory/postman_collection.json`
+4. Select **Retail Platform — Local** as the active environment
+5. Start the services, run **Register** then **Login** in the auth collection — tokens are saved to the environment automatically and all other collections pick them up
 
 ---
 

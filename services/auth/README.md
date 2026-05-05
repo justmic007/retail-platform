@@ -17,6 +17,7 @@ Production-grade authentication service built in Go. Issues and validates JWT to
 - [Running Tests](#running-tests)
 - [Environment Variables](#environment-variables)
 - [Key Design Decisions](#key-design-decisions)
+- [Role Management](#role-management)
 
 ---
 
@@ -458,6 +459,57 @@ Invalidates the refresh token. Access token remains valid until expiry (15m).
 
 ---
 
+### POST /auth/change-password 🔒
+
+Changes the authenticated user's password. Requires the current password for verification. Invalidates all refresh tokens after a successful change — forces re-login on all devices.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request:**
+```json
+{
+  "current_password": "securepassword123",
+  "new_password": "newpassword456"
+}
+```
+
+**Response 200:**
+```json
+{
+  "message": "password changed successfully — please log in again on all devices"
+}
+```
+
+**Errors:** `400` new password too short (min 8 chars) · `401` wrong current password or missing token
+
+---
+
+### PATCH /auth/users/:id/role 🔒 Admin only
+
+Promotes or demotes a user's role. Requires an admin JWT.
+
+**Headers:** `Authorization: Bearer <access_token>`
+
+**Request:**
+```json
+{
+  "role": "admin"
+}
+```
+
+Valid values: `"admin"` · `"customer"`
+
+**Response 200:**
+```json
+{
+  "message": "user role updated to admin"
+}
+```
+
+**Errors:** `400` invalid or missing role · `401` missing or invalid token · `403` caller is not an admin
+
+---
+
 ### GET /health
 
 Liveness probe — returns 200 if the process is running.
@@ -490,6 +542,10 @@ Every token refresh invalidates the old refresh token and issues a new one. If a
 ### 5. SQL injection prevention
 
 All queries use parameterised placeholders (`$1`, `$2`). No string concatenation in SQL. Parameterised queries pass values separately to Postgres — they are treated as data, never as SQL code.
+
+### 7. Role-based access control (RBAC)
+
+The `RequireRole("admin")` middleware sits after `AuthMiddleware` on admin-only routes. `AuthMiddleware` validates the JWT and sets the role in context. `RequireRole` reads that role and returns `403 Forbidden` if it doesn't match — the handler never runs. This means role enforcement is at the routing layer, not scattered across handler logic.
 
 ### 6. Distroless Docker image
 
@@ -524,14 +580,21 @@ Service starts on `http://localhost:8080`
 A ready-to-use Postman collection is included at `postman_collection.json`.
 
 **Import it:**
-1. Open Postman → **Import** → select `services/auth/postman_collection.json`
-2. The `base_url` variable is pre-set to `http://localhost:8080`
+1. Open Postman → **Import** → select `postman_environment.json` from the repo root
+2. Import `services/auth/postman_collection.json`
+3. Select **Retail Platform — Local** as the active environment
+4. The `auth_base_url` is pre-set to `http://localhost:8080`
 
 **Recommended order:**
 1. **Register** — creates a user
 2. **Login** — tokens are auto-saved to collection variables
 3. **Get Current User** — uses the saved token automatically
 4. **Security Tests** folder — verifies auth behaviour (wrong password, missing token, etc.)
+
+**Admin flow:**
+1. Login as `admin@retailplatform.com` — token is saved automatically
+2. Use **Promote User** with any user's ID to change their role
+3. That user must log in again for the new role to appear in their JWT
 
 ---
 
@@ -578,6 +641,19 @@ AuthService depends on `UserRepository` and `TokenRepository` interfaces — not
 ### Why separate UserResponse from User?
 
 The `User` domain struct contains `PasswordHash`. The `UserResponse` struct does not. Having two separate structs makes it physically impossible to accidentally return the password hash in an API response — it's structural safety, not a comment or convention.
+
+### Role Management
+
+The `role` column on the `users` table drives all access control across the platform. Two roles exist:
+
+| Role | Description |
+|---|---|
+| `customer` | Default on registration. Can browse products, place orders, manage their own account. |
+| `admin` | Can adjust stock levels (`PATCH /products/:id/stock` on Inventory Service) and promote/demote other users. |
+
+Role changes take effect on the **next login** — the current access token encodes the role at the time it was issued and is valid until it expires (15m). This is an intentional trade-off: stateless JWTs cannot be updated mid-flight. For immediate role revocation, invalidate all refresh tokens for that user so they cannot obtain new access tokens.
+
+---
 
 ### Why graceful shutdown?
 

@@ -148,6 +148,24 @@ func (r *postgresUserRepo) FindByID(ctx context.Context, id string) (*domain.Use
 	return user, nil
 }
 
+// UpdateRole elevates a user role to admin and vice-versa
+func (r *postgresUserRepo) UpdateRole(ctx context.Context, userID, role string) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET role = $1 WHERE id = $2",
+		role, userID,
+	)
+	return err
+}
+
+// Update password implementation
+func (r *postgresUserRepo) UpdatePassword(ctx context.Context, userID, hash string) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
+		hash, userID,
+	)
+	return err
+}
+
 // ── Token Repository ──────────────────────────────────────────────────────────
 
 type postgresTokenRepo struct {

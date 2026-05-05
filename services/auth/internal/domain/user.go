@@ -19,6 +19,11 @@ const (
 	RoleAdmin    Role = "admin"
 )
 
+// PromoteRequest is the body for PATCH /auth/users/:id/role
+type PromoteRequest struct {
+	Role string `json:"role" validate:"required,oneof=customer admin"`
+}
+
 // This struct is used INSIDE the service — it contains PasswordHash
 // which must NEVER be sent to the client.
 type User struct {
@@ -28,6 +33,12 @@ type User struct {
 	Role         Role
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
+}
+
+// ChangePasswordRequest is the body for POST /auth/change-password
+type ChangePasswordRequest struct {
+	CurrentPassword string `json:"current_password" validate:"required"`
+	NewPassword     string `json:"new_password"     validate:"required,min=8"`
 }
 
 // UserResponse is what gets sent to the client in API responses.

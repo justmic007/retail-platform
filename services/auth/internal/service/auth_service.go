@@ -241,3 +241,45 @@ func (s *AuthService) GetUserByID(ctx context.Context, userID string) (*domain.U
 	}
 	return user, nil
 }
+
+func (s *AuthService) PromoteUser(ctx context.Context, userID, role string) error {
+	if err := s.userRepo.UpdateRole(ctx, userID, role); err != nil {
+		return fmt.Errorf("promote user: %w", err)
+	}
+	s.log.Info().Str("user_id", userID).Str("role", role).Msg("user role updated")
+	return nil
+}
+
+func (s *AuthService) ChangePassword(ctx context.Context, userID string, req domain.ChangePasswordRequest) error {
+	// Get the user
+	user, err := s.userRepo.FindByID(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("change password: %w", err)
+	}
+
+	// Verify current password — must be correct before allowing change
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.CurrentPassword)); err != nil {
+		return domain.ErrInvalidCredentials
+	}
+
+	// Hash new password
+	hash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), s.cfg.BcryptCost)
+	if err != nil {
+		return fmt.Errorf("hash new password: %w", err)
+	}
+
+	// Update password in database
+	if err := s.userRepo.UpdatePassword(ctx, userID, string(hash)); err != nil {
+		return fmt.Errorf("update password: %w", err)
+	}
+
+	// Invalidate ALL refresh tokens — logs out every device
+	// If someone stole a refresh token, it's now dead
+	if err := s.tokenRepo.DeleteAllUserTokens(ctx, userID); err != nil {
+		s.log.Warn().Err(err).Str("user_id", userID).
+			Msg("failed to delete tokens after password change")
+	}
+
+	s.log.Info().Str("user_id", userID).Msg("password changed — all sessions terminated")
+	return nil
+}

@@ -52,6 +52,14 @@ func NewRouter(h *handler.AuthHandler, jwtManager *jwt.Manager) *gin.Engine {
 	{
 		protected.GET("/me", h.Me)
 		protected.POST("/logout", h.Logout)
+		protected.POST("/change-password", h.ChangePassword)
+	}
+
+	// Admin-only routes
+	adminRoutes := protected.Group("/")
+	adminRoutes.Use(middleware.RequireRole("admin"))
+	{
+		adminRoutes.PATCH("/users/:id/role", h.PromoteUser)
 	}
 
 	return r
