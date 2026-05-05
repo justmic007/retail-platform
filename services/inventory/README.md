@@ -10,6 +10,7 @@ Production-grade inventory management service built in Go. Manages the product c
 - [Request & Response Lifecycle](#request--response-lifecycle)
 - [Cache-aside Pattern](#cache-aside-pattern)
 - [Concurrency & Overselling Prevention](#concurrency--overselling-prevention)
+- [Low Stock Events](#low-stock-events)
 - [Layer Breakdown](#layer-breakdown)
 - [Database Schema](#database-schema)
 - [API Reference](#api-reference)
@@ -115,7 +116,7 @@ HANDLER: InventoryHandler.Reserve (internal/handler/inventory_handler.go)
 │    order_id:   required
 │  Step 3 — Call service.Reserve(c.Request.Context(), req)
 │  Step 4 — On success: fetch updated stock, return response
-│  Step 4 — On error: map domain error to HTTP status
+│  Step 5 — On error: map domain error to HTTP status
 │
 ▼
 ```
@@ -160,7 +161,7 @@ REPOSITORY: postgresStockRepo.Reserve (internal/repository/postgres.go)
 │
 │  Step 1 — Begin transaction
 │  │   tx, err := r.db.Begin(ctx)
-│  │   defer tx.Rollback(ctx)  ← safety net, no-op if Commit succeeds
+│  │   defer func() { _ = tx.Rollback(ctx) }()  ← safety net, no-op if Commit succeeds
 │
 │  Step 2 — SELECT FOR UPDATE (row-level lock)
 │  │
@@ -265,6 +266,10 @@ GET /products/:id/stock
 │     ├── HIT  (key exists)                               │
 │     │   └── Return cached available count (~0.1ms)      │
 │     │       No database query needed                    │
+│     │       NOTE: reserved is returned as 0 on a hit    │
+│     │       — only available is cached, not the full    │
+│     │         stock breakdown. Use GET /products/:id    │
+│     │         for authoritative quantity + reserved.    │
 │     │                                                   │
 │     └── MISS (key doesn't exist)                        │
 │         │                                               │
@@ -274,7 +279,7 @@ GET /products/:id/stock
 │         ├── Store in Redis: SET stock:uuid value 5m TTL │
 │         │   (populates cache for next request)          │
 │         │                                               │
-│         └── Return stock level to caller                │
+│         └── Return full stock level to caller           │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -300,6 +305,18 @@ Why DELETE and not UPDATE?
   - No computation, no race condition
 ```
 
+### ListProducts bypasses cache
+
+```
+GET /products always queries Postgres directly — it does NOT use Redis.
+
+Why?
+  Caching a full product list is complex to invalidate correctly.
+  Any stock change to any product would need to invalidate the list.
+  Individual product caching (GET /products/:id/stock) is simpler
+  and covers the hot path — the list endpoint is used less frequently.
+```
+
 ### TTL as safety net
 
 ```
@@ -319,7 +336,7 @@ This means: even in the worst case (bug prevents cache invalidation),
 
 ## Concurrency & Overselling Prevention
 
-This is the most critical part of the Inventory Service. At ShopriteX scale, thousands of customers may simultaneously try to buy the last available unit.
+This is the most critical part of the Inventory Service. At scale, thousands of customers may simultaneously try to buy the last available unit.
 
 ### The problem without locking
 
@@ -376,6 +393,49 @@ Product C: locked by transaction 3
 
 1000 different products = 1000 simultaneous reservations
 Each locks its own row with no interference
+```
+
+---
+
+## Low Stock Events
+
+When a reservation brings available stock below `LOW_STOCK_THRESHOLD` (default: 10), the service publishes a `StockLow` event to the shared event bus. The Notification Service listens on this channel and alerts warehouse staff.
+
+```
+POST /inventory/reserve
+│
+│  Reservation succeeds
+│
+▼
+SERVICE: checkAndPublishLowStock()
+│
+│  Reads updated stock from Postgres
+│  available < LOW_STOCK_THRESHOLD (10)?
+│
+│  YES →  select {
+│           case eventBus.Stock <- StockEvent{
+│             Type:        "STOCK_LOW",
+│             ProductID:   "...",
+│             ProductName: "Full Cream Milk 1L",
+│             StockLevel:  3,
+│           }:
+│           // published
+│         default:
+│           // channel full — skip, don't block the reservation
+│         }
+│
+│  NO  →  nothing published
+│
+▼
+NOTIFICATION SERVICE reads from eventBus.Stock channel
+  → sends alert to warehouse staff
+```
+
+**Key design:** the event publish is non-blocking. If the notification channel is full, the event is dropped rather than slowing down the reservation. The reservation always completes — notifications are best-effort.
+
+**Configuring the threshold:**
+```bash
+LOW_STOCK_THRESHOLD=20  # alert when stock drops below 20 units
 ```
 
 ---
@@ -461,7 +521,7 @@ All endpoints require a valid JWT issued by Auth Service (`Authorization: Bearer
 
 ### GET /products
 
-Returns all active products with current stock levels.
+Returns all active products with current stock levels. Always queries Postgres directly — bypasses Redis cache.
 
 **Response 200:**
 ```json
@@ -488,7 +548,25 @@ Returns all active products with current stock levels.
 
 ### GET /products/:id
 
-Returns a single product with stock level.
+Returns a single product with its full stock level. Uses Redis cache for the stock level.
+
+**Response 200:**
+```json
+{
+  "product": {
+    "id": "a1b2c3d4-0001-0001-0001-000000000001",
+    "sku": "OIL-SF-2L",
+    "name": "Sunflower Oil 2L",
+    "description": "Pure sunflower cooking oil",
+    "price": 89.99,
+    "category": "Groceries",
+    "is_active": true,
+    "quantity": 150,
+    "reserved": 5,
+    "available": 145
+  }
+}
+```
 
 **Errors:** `404` product not found
 
@@ -496,7 +574,9 @@ Returns a single product with stock level.
 
 ### GET /products/:id/stock
 
-Returns just the stock level for a product. Called by Order Service before reservation.
+Returns just the stock level for a product. Uses Redis cache — fast path for Order Service.
+
+**Note:** on a cache hit, `reserved` is returned as `0` and `quantity` reflects the cached `available` value. For the authoritative breakdown, use `GET /products/:id`.
 
 **Response 200:**
 ```json
@@ -507,6 +587,8 @@ Returns just the stock level for a product. Called by Order Service before reser
   "available": 145
 }
 ```
+
+**Errors:** `404` product not found
 
 ---
 
@@ -557,6 +639,8 @@ Returns previously reserved units back to available. Called when an order is can
 }
 ```
 
+**Errors:** `404` product not found
+
 ---
 
 ### PATCH /products/:id/stock 🔒 Admin only
@@ -571,7 +655,14 @@ Manually sets the total quantity. Used when new stock arrives at the warehouse.
 }
 ```
 
-**Errors:** `403` admin role required
+**Response 200:**
+```json
+{
+  "message": "stock adjusted successfully"
+}
+```
+
+**Errors:** `403` admin role required · `404` product not found
 
 ---
 
@@ -583,7 +674,7 @@ Kubernetes liveness and readiness probes.
 
 ## Running Locally
 
-**Prerequisites:** Go 1.23+, Docker Desktop, golang-migrate
+**Prerequisites:** Go 1.25+, Docker Desktop, golang-migrate
 
 ```bash
 # 1. Start infrastructure
@@ -628,9 +719,10 @@ Unit tests use mock repository and mock cache — no Postgres or Redis required.
 | `JWT_SECRET` | ✅ | — | Must match Auth Service JWT_SECRET exactly |
 | `REDIS_URL` | | `redis://localhost:6379/0` | Redis connection URL |
 | `INVENTORY_PORT` | | `8082` | HTTP server port |
-| `CACHE_TTL` | | `5m` | How long stock levels stay cached |
-| `LOW_STOCK_THRESHOLD` | | `10` | Publish StockLow event below this level |
+| `CACHE_TTL` | | `5m` | How long stock levels stay cached in Redis |
+| `LOW_STOCK_THRESHOLD` | | `10` | Publish StockLow event when available drops below this |
 | `APP_ENV` | | `development` | Environment name |
+| `LOG_FORMAT` | | `pretty` | `pretty` for dev, `json` for production |
 
 ---
 
@@ -648,6 +740,10 @@ Products change rarely (weekly). Stock changes constantly (every order). Separat
 
 Write-through updates cache on every write — adding latency to every reservation. Cache-aside only hits the cache on reads and invalidates on writes. For inventory: reads vastly outnumber writes. Cache-aside is optimal — writes stay fast, reads are cached after the first miss.
 
+### Why only cache available and not the full stock breakdown?
+
+Caching `available` (a single integer) is simple and covers the hot path — Order Service only needs to know if stock exists before reserving. Caching `quantity` and `reserved` separately introduces consistency risk: they could become out of sync under concurrent writes. One value, one key, one source of truth.
+
 ### Why NUMERIC(10,2) for price?
 
 IEEE 754 floating point cannot precisely represent most decimal values. `0.1 + 0.2 = 0.30000000000000004`. For a retailer processing millions of transactions, floating point errors cause real financial discrepancies. NUMERIC stores exact decimals. Always use NUMERIC or DECIMAL for money — never FLOAT.
@@ -655,3 +751,7 @@ IEEE 754 floating point cannot precisely represent most decimal values. `0.1 + 0
 ### Why is the cache layer a separate package with an interface?
 
 The `StockCache` interface allows unit tests to inject a map-based mock instead of a real Redis. Tests run in milliseconds without any infrastructure. The same pattern as repository interfaces — depend on abstractions, not implementations.
+
+### Why are low stock events non-blocking?
+
+The reservation must always complete fast — a customer is waiting. Notification delivery is best-effort. Using a buffered channel with a `select/default` means if the notification channel is full, the event is dropped rather than blocking the reservation goroutine. Stock accuracy is critical; notification latency is acceptable.
