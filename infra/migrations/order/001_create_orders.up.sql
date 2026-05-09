@@ -22,6 +22,12 @@ CREATE TABLE IF NOT EXISTS orders (
     -- Optional customer notes
     notes        TEXT,
 
+    -- Payment status — separate from order processing status
+    -- UNPAID:   order placed, payment not yet collected
+    -- PAID:     payment confirmed (simulated for this platform)
+    -- REFUNDED: payment returned to customer after cancellation
+    payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+
     created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
@@ -30,6 +36,11 @@ CREATE TABLE IF NOT EXISTS orders (
 ALTER TABLE orders
     ADD CONSTRAINT orders_status_check
     CHECK (status IN ('PENDING', 'PROCESSING', 'CONFIRMED', 'FAILED', 'CANCELLED'));
+
+ALTER TABLE orders
+    ADD CONSTRAINT orders_payment_status_check
+    CHECK (payment_status IN ('UNPAID', 'PAID', 'REFUNDED'));
+
 
 -- ── Indexes ────────────────────────────────────────────────────────────────
 -- Most queries filter by user_id — GET /orders lists by authenticated user
