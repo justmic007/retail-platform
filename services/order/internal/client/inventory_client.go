@@ -13,6 +13,15 @@ import (
 	pkgerrors "retail-platform/pkg/errors"
 )
 
+// InventoryClient defines the interface for calling Inventory Service.
+// The worker and service depend on this interface — not the concrete HTTP client.
+// This allows tests to inject a mock and makes swapping HTTP for gRPC trivial.
+type InventoryClientInterface interface {
+	GetProduct(ctx context.Context, productID string) (*ProductResponse, error)
+	Reserve(ctx context.Context, productID string, quantity int, orderID string) error
+	Release(ctx context.Context, productID string, quantity int, orderID string) error
+}
+
 // ProductResponse is the relevant part of Inventory Service's product response.
 type ProductResponse struct {
 	ID    string  `json:"id"`
@@ -44,7 +53,7 @@ type InventoryClient struct {
 }
 
 // NewInventoryClient creates a new InventoryClient.
-func NewInventoryClient(cfg *config.Config, tokenManager *ServiceTokenManager) *InventoryClient {
+func NewInventoryClient(cfg *config.Config, tokenManager *ServiceTokenManager) InventoryClientInterface {
 	return &InventoryClient{
 		baseURL:      cfg.InventoryServiceURL,
 		timeout:      cfg.InventoryClientTimeout,
