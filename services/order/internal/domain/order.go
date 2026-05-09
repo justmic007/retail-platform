@@ -31,10 +31,10 @@ type Order struct {
 	Status         OrderStatus
 	PaymentStatus  PaymentStatus
 	TotalAmount    float64
-	IdempodencyKey string
+	IdempotencyKey string
 	Notes          string
 	Items          []*OrderItem
-	CreditAt       time.Time
+	CreatedAt      time.Time
 	UpdatedAt      time.Time
 }
 
@@ -60,7 +60,7 @@ type OrderItem struct {
 // from Inventory Service by the worker processor, never trusted from client.
 type CreateOrderRequest struct {
 	Items          []OrderItemRequest `json:"items" validate:"required,min=1"`
-	IdempodencyKey string             `json:"idempotency_key" validate:"required"`
+	IdempotencyKey string             `json:"idempotency_key" validate:"required"`
 	Notes          string             `json:"notes"`
 }
 
@@ -79,10 +79,10 @@ type OrderResponse struct {
 	Status         OrderStatus          `json:"status"`
 	PaymentStatus  PaymentStatus        `json:"payment_status"`
 	TotalAmount    float64              `json:"total_amount"`
-	IdempodencyKey string               `json:"idempotency_key"`
+	IdempotencyKey string               `json:"idempotency_key"`
 	Notes          string               `json:"notes"`
 	Items          []*OrderItemResponse `json:"items"`
-	CreditAt       time.Time            `json:"credit_at"`
+	CreatedAt      time.Time            `json:"created_at"`
 	UpdatedAt      time.Time            `json:"updated_at"`
 }
 
@@ -103,10 +103,10 @@ func (o *Order) ToResponse() *OrderResponse {
 		UserID:         o.UserID,
 		Status:         o.Status,
 		TotalAmount:    o.TotalAmount,
-		IdempodencyKey: o.IdempodencyKey,
+		IdempotencyKey: o.IdempotencyKey,
 		PaymentStatus:  o.PaymentStatus,
 		Notes:          o.Notes,
-		CreditAt:       o.CreditAt,
+		CreatedAt:      o.CreatedAt,
 		UpdatedAt:      o.UpdatedAt,
 	}
 
