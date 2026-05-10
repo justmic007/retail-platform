@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/shopspring/decimal"
 	"retail-platform/order/internal/client"
 	"retail-platform/order/internal/domain"
 	"retail-platform/order/internal/worker"
@@ -61,7 +62,7 @@ func (m *mockOrderRepo) UpdateStatus(ctx context.Context, orderID string, status
 	return nil
 }
 
-func (m *mockOrderRepo) UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total float64) error {
+func (m *mockOrderRepo) UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total decimal.Decimal) error {
 	if order, ok := m.orders[orderID]; ok {
 		order.Status = status
 		order.TotalAmount = total
@@ -86,7 +87,7 @@ func (m *mockInventoryClient) GetProduct(ctx context.Context, productID string) 
 	return &client.ProductResponse{
 		ID:    productID,
 		Name:  "Test Product",
-		Price: 99.99,
+		Price: decimal.NewFromFloat(99.99),
 	}, nil
 }
 
