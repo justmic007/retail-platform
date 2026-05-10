@@ -5,6 +5,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -230,7 +231,7 @@ func TestCancelOrder(t *testing.T) {
 		repo.orders[order.ID] = order
 
 		err := svc.CancelOrder(ctx, "other-user-order", "user-123")
-		if err != domain.ErrOrderNotFound {
+		if !errors.Is(err, domain.ErrOrderNotFound) {
 			t.Errorf("expected ErrOrderNotFound, got %v", err)
 		}
 	})

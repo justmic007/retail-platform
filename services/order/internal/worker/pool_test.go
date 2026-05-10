@@ -30,7 +30,7 @@ func (m *mockProcessor) ProcessOrder(ctx context.Context, orderID string) error 
 func newTestPool(size int, processor *mockProcessor) *WorkerPool {
 	log := logger.New("worker-test")
 	pool := &WorkerPool{
-		jobs: make(chan Job, size*2),
+		jobs: make(chan Job, size*10),
 		size: size,
 		log:  log,
 	}
