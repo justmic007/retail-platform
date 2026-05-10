@@ -59,8 +59,6 @@ func TestWorkerPool_Submit(t *testing.T) {
 
 		pool.processor = &OrderProcessor{log: log}
 
-		ctx := context.Background()
-
 		// Start workers manually with counting logic
 		for i := 0; i < pool.size; i++ {
 			pool.wg.Add(1)

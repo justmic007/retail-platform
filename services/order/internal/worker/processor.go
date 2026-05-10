@@ -123,7 +123,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 
 	p.log.Info().
 		Str("order_id", orderID).
-		Float64("total_amount", totalAmount).
+		Float64("total_amount", totalAmount.InexactFloat64()).
 		Msg("order confirmed successfully")
 
 	return nil
