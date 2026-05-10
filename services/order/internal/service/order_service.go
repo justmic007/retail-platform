@@ -8,21 +8,20 @@ import (
 	"fmt"
 
 	"retail-platform/order/internal/client"
-	"retail-platform/order/internal/repository"
 	"retail-platform/order/internal/domain"
+	"retail-platform/order/internal/repository"
 	"retail-platform/order/internal/worker"
 	"retail-platform/pkg/events"
 	"retail-platform/pkg/logger"
-
 )
 
 // OrderService contains all order business logic.
 type OrderService struct {
-	repo        repository.OrderRepository
-	inventoryClient   client.InventoryClientInterface
-	pool  *worker.WorkerPool
-	eventBus	*events.Bus
-	log      *logger.Logger
+	repo            repository.OrderRepository
+	inventoryClient client.InventoryClientInterface
+	pool            *worker.WorkerPool
+	eventBus        *events.Bus
+	log             *logger.Logger
 }
 
 // NewOrderService creates a new OrderService with all dependencies injected.
@@ -34,11 +33,11 @@ func NewOrderService(
 	log *logger.Logger,
 ) *OrderService {
 	return &OrderService{
-		repo:        repo,
-		inventoryClient:   inventoryClient,
-		pool:  pool,
-		eventBus: eventBus,
-		log:      log,
+		repo:            repo,
+		inventoryClient: inventoryClient,
+		pool:            pool,
+		eventBus:        eventBus,
+		log:             log,
 	}
 }
 
@@ -49,8 +48,8 @@ func NewOrderService(
 //  2. Save order as PENDING with items (no prices yet — fetched by worker)
 //  3. Submit to worker pool — returns ErrPoolFull if queue is full
 //  4. Return order with PENDING status — handler returns 202
-func (s *OrderService) CreateOrder(ctx context.Context, userID string req domain.CreateOrderRequest) (*domain.Order, error) {
-	
+func (s *OrderService) CreateOrder(ctx context.Context, userID string, req domain.CreateOrderRequest) (*domain.Order, error) {
+
 	// Step 1: Check idempotency key
 	existing, err := s.repo.FindByIdempotencyKey(ctx, req.IdempotencyKey, userID)
 	if err != nil {
