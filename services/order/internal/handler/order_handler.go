@@ -7,27 +7,27 @@ import (
 
 	"retail-platform/order/internal/domain"
 	"retail-platform/order/internal/service"
-	"retail-platform/order/pkg/errors"
-	"retail-platform/order/pkg/logger"
-	"retail-platform/order/pkg/middleware"
-	"retail-platform/order/pkg/validator"
+	"retail-platform/pkg/errors"
+	"retail-platform/pkg/logger"
+	"retail-platform/pkg/middleware"
+	"retail-platform/pkg/validator"
 
 	"github.com/gin-gonic/gin"
 )
 
 // OrderHandler holds dependencies for all order HTTP handlers.
-type OrderHandler strict {
-	service 	*service.OrderService
-	validator 	*validator.Validator
-	log 		*logger.Logger
+type OrderHandler struct {
+	service   *service.OrderService
+	validator *validator.Validator
+	log       *logger.Logger
 }
 
 // NewOrderHandler creates a new OrderHandler.
 func NewOrderHandler(svc *service.OrderService, v *validator.Validator, log *logger.Logger) *OrderHandler {
 	return &OrderHandler{
-		service: 	svc,
-		validator: 	v,
-		log: 		log,
+		service:   svc,
+		validator: v,
+		log:       log,
 	}
 }
 
@@ -40,7 +40,7 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"error": "invalid request body",
-			"code": "BAD_REQUEST",
+			"code":  "BAD_REQUEST",
 		})
 		return
 	}
