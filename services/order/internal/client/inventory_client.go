@@ -86,7 +86,7 @@ func (c *InventoryClient) GetProduct(ctx context.Context, productID string) (*Pr
 	if err != nil {
 		return nil, fmt.Errorf("get product request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusNotFound {
 		return nil, pkgerrors.NewNotFound("product", nil)
@@ -138,7 +138,7 @@ func (c *InventoryClient) Reserve(ctx context.Context, productID string, quantit
 	if err != nil {
 		return fmt.Errorf("reserve request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode == http.StatusConflict {
 		return pkgerrors.NewInsufficientStock(productID)
@@ -183,7 +183,7 @@ func (c *InventoryClient) Release(ctx context.Context, productID string, quantit
 	if err != nil {
 		return fmt.Errorf("release request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("release failed with status %d", resp.StatusCode)

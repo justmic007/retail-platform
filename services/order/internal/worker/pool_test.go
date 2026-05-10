@@ -4,7 +4,6 @@ package worker
 
 import (
 	"context"
-	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -28,50 +27,32 @@ func (m *mockProcessor) ProcessOrder(ctx context.Context, orderID string) error 
 	return nil
 }
 
-func newTestPool(size int, processor *OrderProcessor) *WorkerPool {
+func newTestPool(size int, processor *mockProcessor) *WorkerPool {
 	log := logger.New("worker-test")
-	return NewWorkerPool(size, processor, log)
+	pool := &WorkerPool{
+		jobs: make(chan Job, size*2),
+		size: size,
+		log:  log,
+	}
+	// wire the mock processor into the pool's worker loop
+	for i := 0; i < size; i++ {
+		pool.wg.Add(1)
+		go func() {
+			defer pool.wg.Done()
+			for job := range pool.jobs {
+				_ = processor.ProcessOrder(context.Background(), job.OrderID)
+			}
+		}()
+	}
+	return pool
 }
 
 func TestWorkerPool_Submit(t *testing.T) {
 	t.Run("submitted jobs are processed", func(t *testing.T) {
-		log := logger.New("worker-test")
-		var count atomic.Int64
+		processor := &mockProcessor{}
+		pool := newTestPool(2, processor)
 
-		processor := &OrderProcessor{
-			log: log,
-		}
-		_ = processor
-
-		pool := &WorkerPool{
-			jobs: make(chan Job, 20),
-			size: 2,
-			log:  log,
-			processor: &OrderProcessor{
-				log: log,
-			},
-		}
-
-		// Override processor with a counting one
-		var wg sync.WaitGroup
 		jobCount := 5
-		wg.Add(jobCount)
-
-		pool.processor = &OrderProcessor{log: log}
-
-		// Start workers manually with counting logic
-		for i := 0; i < pool.size; i++ {
-			pool.wg.Add(1)
-			go func() {
-				defer pool.wg.Done()
-				for range pool.jobs {
-					count.Add(1)
-					wg.Done()
-				}
-			}()
-		}
-
-		// Submit jobs
 		for i := 0; i < jobCount; i++ {
 			err := pool.Submit(Job{OrderID: "order-" + string(rune('0'+i))})
 			if err != nil {
@@ -79,15 +60,11 @@ func TestWorkerPool_Submit(t *testing.T) {
 			}
 		}
 
-		// Wait for all jobs to be processed
-		wg.Wait()
+		pool.Shutdown()
 
-		if count.Load() != int64(jobCount) {
-			t.Errorf("expected %d jobs processed, got %d", jobCount, count.Load())
+		if processor.processed.Load() != int64(jobCount) {
+			t.Errorf("expected %d jobs processed, got %d", jobCount, processor.processed.Load())
 		}
-
-		close(pool.jobs)
-		pool.wg.Wait()
 	})
 }
 
@@ -116,41 +93,19 @@ func TestWorkerPool_ErrPoolFull(t *testing.T) {
 
 func TestWorkerPool_GracefulShutdown(t *testing.T) {
 	t.Run("all jobs complete before shutdown returns", func(t *testing.T) {
-		log := logger.New("worker-test")
-		var processed atomic.Int64
+		processor := &mockProcessor{delay: 10 * time.Millisecond}
+		pool := newTestPool(2, processor)
 
-		pool := &WorkerPool{
-			jobs: make(chan Job, 10),
-			size: 2,
-			log:  log,
-		}
-
-		ctx := context.Background()
-
-		// Start workers that count processed jobs
-		for i := 0; i < pool.size; i++ {
-			pool.wg.Add(1)
-			go func() {
-				defer pool.wg.Done()
-				for range pool.jobs {
-					time.Sleep(10 * time.Millisecond)
-					processed.Add(1)
-				}
-			}()
-		}
-
-		// Submit jobs
 		jobCount := 5
 		for i := 0; i < jobCount; i++ {
 			_ = pool.Submit(Job{OrderID: "order-" + string(rune('0'+i))})
 		}
 
-		// Shutdown — should wait for all jobs
+		// Shutdown — should wait for all in-flight jobs to complete
 		pool.Shutdown()
-		_ = ctx
 
-		if processed.Load() != int64(jobCount) {
-			t.Errorf("expected %d jobs processed before shutdown, got %d", jobCount, processed.Load())
+		if processor.processed.Load() != int64(jobCount) {
+			t.Errorf("expected %d jobs processed before shutdown, got %d", jobCount, processor.processed.Load())
 		}
 	})
 }

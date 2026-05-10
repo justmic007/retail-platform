@@ -95,7 +95,7 @@ func (m *ServiceTokenManager) refreshToken(ctx context.Context) (string, error) 
 	if err != nil {
 		return "", fmt.Errorf("login request failed: %w", err)
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	if resp.StatusCode != http.StatusOK {
 		return "", fmt.Errorf("login failed with status %d", resp.StatusCode)
