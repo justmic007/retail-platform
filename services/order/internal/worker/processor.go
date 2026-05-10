@@ -14,6 +14,8 @@ import (
 	"retail-platform/order/internal/repository"
 	"retail-platform/pkg/events"
 	"retail-platform/pkg/logger"
+
+	"github.com/shopspring/decimal"
 )
 
 // reservedItem tracks a successfully reserved stock item.
@@ -77,7 +79,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 
 	// Step 3 — Fetch price + name for each item from Inventory Service
 	// and calculate total_amount
-	var totalAmount float64
+	var totalAmount decimal.Decimal
 	var reserved []reservedItem
 
 	for _, item := range order.Items {
@@ -91,8 +93,8 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 		// Snapshot price and name at order time
 		item.ProductName = product.Name
 		item.UnitPrice = product.Price
-		item.TotalPrice = float64(item.Quantity) * product.Price
-		totalAmount += item.TotalPrice
+		item.TotalPrice = product.Price.Mul(decimal.NewFromInt(int64(item.Quantity)))
+		totalAmount = totalAmount.Add(item.TotalPrice)
 	}
 
 	// Step 4 — Reserve stock for each item
@@ -161,18 +163,18 @@ func (p *OrderProcessor) failOrder(ctx context.Context, orderID, userID string, 
 		p.log.Error().Err(err).Str("order_id", orderID).Msg("failed to update order status to FAILED")
 	}
 
-	p.publishOrderEvent(events.EventOrderFailed, orderID, userID, 0)
+	p.publishOrderEvent(events.EventOrderFailed, orderID, userID, decimal.Zero)
 }
 
 // publishOrderEvent publishes an order event to the event bus non-blocking.
 // If the channel is full the event is dropped — notifications are best-effort.
-func (p *OrderProcessor) publishOrderEvent(eventType events.EventType, orderID, userID string, total float64) {
+func (p *OrderProcessor) publishOrderEvent(eventType events.EventType, orderID, userID string, total decimal.Decimal) {
 	select {
 	case p.eventBus.Orders <- events.OrderEvent{
 		Type:       eventType,
 		OrderID:    orderID,
 		UserID:     userID,
-		Total:      total,
+		Total:      total.InexactFloat64(),
 		OccurredAt: time.Now(),
 	}:
 	default:

@@ -11,6 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/shopspring/decimal"
 )
 
 type postgresOrderRepo struct {
@@ -169,7 +170,7 @@ func (r *postgresOrderRepo) UpdateStatus(ctx context.Context, orderID string, st
 
 // UpdateStatusAndTotal updates status and total_amount together.
 // Called when order is CONFIRMED with the final calculated total.
-func (r *postgresOrderRepo) UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total float64) error {
+func (r *postgresOrderRepo) UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total decimal.Decimal) error {
 	_, err := r.db.Exec(ctx, `
 		UPDATE orders SET status = $1, total_amount = $2 WHERE id = $3
 	`, status, total, orderID)

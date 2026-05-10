@@ -2,7 +2,11 @@
 // No external dependencies - no Gin, no pgx, no HTTP.
 package domain
 
-import "time"
+import (
+	"time"
+
+	"github.com/shopspring/decimal"
+)
 
 // OrderStatus represents the lifecycle of an order.
 type OrderStatus string
@@ -30,7 +34,7 @@ type Order struct {
 	UserID         string
 	Status         OrderStatus
 	PaymentStatus  PaymentStatus
-	TotalAmount    float64
+	TotalAmount    decimal.Decimal
 	IdempotencyKey string
 	Notes          string
 	Items          []*OrderItem
@@ -48,8 +52,8 @@ type OrderItem struct {
 	ProductID   string
 	ProductName string
 	Quantity    int
-	UnitPrice   float64
-	TotalPrice  float64
+	UnitPrice   decimal.Decimal
+	TotalPrice  decimal.Decimal
 	CreatedAt   time.Time
 }
 
@@ -78,7 +82,7 @@ type OrderResponse struct {
 	UserID         string               `json:"user_id"`
 	Status         OrderStatus          `json:"status"`
 	PaymentStatus  PaymentStatus        `json:"payment_status"`
-	TotalAmount    float64              `json:"total_amount"`
+	TotalAmount    decimal.Decimal      `json:"total_amount"`
 	IdempotencyKey string               `json:"idempotency_key"`
 	Notes          string               `json:"notes"`
 	Items          []*OrderItemResponse `json:"items"`
@@ -88,12 +92,12 @@ type OrderResponse struct {
 
 // OrderItemResponse is the API response shape for a single order item
 type OrderItemResponse struct {
-	ID          string  `json:"id"`
-	ProductID   string  `json:"product_id"`
-	ProductName string  `json:"product_name"`
-	Quantity    int     `json:"quantity"`
-	UnitPrice   float64 `json:"unit_price"`
-	TotalPrice  float64 `json:"total_price"`
+	ID          string          `json:"id"`
+	ProductID   string          `json:"product_id"`
+	ProductName string          `json:"product_name"`
+	Quantity    int             `json:"quantity"`
+	UnitPrice   decimal.Decimal `json:"unit_price"`
+	TotalPrice  decimal.Decimal `json:"total_price"`
 }
 
 // ToResponse converts an Order domain model to an OrderResponse for API output

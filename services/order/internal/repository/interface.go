@@ -4,6 +4,8 @@ package repository
 import (
 	"context"
 	"retail-platform/order/internal/domain"
+
+	"github.com/shopspring/decimal"
 )
 
 // OrderRepository defines all database operations for orders
@@ -26,7 +28,7 @@ type OrderRepository interface {
 
 	// UpdateStatusAndTotal updates status and total_amount together.
 	// Called when order is CONFIRMED — sets the final calculated total.
-	UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total float64) error
+	UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total decimal.Decimal) error
 
 	// FindByIdempotencyKey looks up an order by its idempotency key and UserID
 	// Returns the existing order if found - used to detect duplicate submissions

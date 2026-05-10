@@ -11,6 +11,8 @@ import (
 
 	"retail-platform/order/internal/config"
 	pkgerrors "retail-platform/pkg/errors"
+
+	"github.com/shopspring/decimal"
 )
 
 // InventoryClient defines the interface for calling Inventory Service.
@@ -24,9 +26,9 @@ type InventoryClientInterface interface {
 
 // ProductResponse is the relevant part of Inventory Service's product response.
 type ProductResponse struct {
-	ID    string  `json:"id"`
-	Name  string  `json:"name"`
-	Price float64 `json:"price"`
+	ID    string          `json:"id"`
+	Name  string          `json:"name"`
+	Price decimal.Decimal `json:"price"`
 }
 
 // reserveRequest is the body for POST /inventory/reserve.
