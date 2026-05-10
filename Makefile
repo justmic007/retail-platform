@@ -124,7 +124,10 @@ test-coverage:
 # ── Code quality ──────────────────────────────────────────────────────────────
 
 lint:
-	golangci-lint run ./...
+	@grep -E '^\s+\.' go.work | tr -d ' \t' | sed 's|^\./||' | while read dir; do \
+		echo "--- Linting $$dir ---"; \
+		(cd $$dir && golangci-lint run --timeout=5m ./...); \
+	done
 
 # gofmt formats code. In Go, formatting is not a style preference — it's enforced.
 fmt:
