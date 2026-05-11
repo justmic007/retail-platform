@@ -2,7 +2,10 @@ module retail-platform/notification
 
 go 1.25.0
 
-require retail-platform/pkg v0.0.0
+require (
+	github.com/caarlos0/env/v10 v10.0.0
+	retail-platform/pkg v0.0.0
+)
 
 require (
 	github.com/mattn/go-colorable v0.1.13 // indirect
