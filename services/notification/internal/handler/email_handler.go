@@ -22,7 +22,7 @@ func NewEmailHandler(log *logger.Logger) *EmailHandler {
 
 // SendOrderConfirmation sends an order confirmation email to the customer.
 func (h *EmailHandler) SendOrderConfirmation(event events.OrderEvent) {
-	h.log.Info.
+	h.log.Info().
 		Str("type", "ORDER_CONFIRMATION").
 		Str("order_id", event.OrderID).
 		Str("user_id", event.UserID).
