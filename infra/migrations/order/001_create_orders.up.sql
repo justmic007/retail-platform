@@ -26,7 +26,9 @@ CREATE TABLE IF NOT EXISTS orders (
     -- UNPAID:   order placed, payment not yet collected
     -- PAID:     payment confirmed (simulated for this platform)
     -- REFUNDED: payment returned to customer after cancellation
-    payment_status VARCHAR(20) NOT NULL DEFAULT 'UNPAID',
+    payment_status   VARCHAR(20)  NOT NULL DEFAULT 'UNPAID',
+
+    idempotency_key VARCHAR(255) NOT NULL,
 
     created_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
     updated_at   TIMESTAMPTZ   NOT NULL DEFAULT NOW()

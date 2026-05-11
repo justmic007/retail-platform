@@ -35,6 +35,14 @@ func (m *mockOrderRepo) Create(ctx context.Context, order *domain.Order) (*domai
 	return order, nil
 }
 
+func (m *mockOrderRepo) FindByIDInternal(ctx context.Context, orderID string) (*domain.Order, error) {
+	order, ok := m.orders[orderID]
+	if !ok {
+		return nil, domain.ErrOrderNotFound
+	}
+	return order, nil
+}
+
 func (m *mockOrderRepo) FindByID(ctx context.Context, orderID, userID string) (*domain.Order, error) {
 	order, ok := m.orders[orderID]
 	if !ok {
@@ -54,6 +62,10 @@ func (m *mockOrderRepo) FindByUserID(ctx context.Context, userID string) ([]*dom
 		}
 	}
 	return result, nil
+}
+
+func (m *mockOrderRepo) UpdateItems(ctx context.Context, items []*domain.OrderItem) error {
+	return nil
 }
 
 func (m *mockOrderRepo) UpdateStatus(ctx context.Context, orderID string, status domain.OrderStatus) error {

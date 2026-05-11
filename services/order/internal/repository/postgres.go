@@ -85,6 +85,41 @@ func (r *postgresOrderRepo) Create(ctx context.Context, order *domain.Order) (*d
 	return order, nil
 }
 
+// FindByIDInternal retrieves an order by ID only — no ownership check.
+// Used by the worker processor — internal process, not a user request.
+func (r *postgresOrderRepo) FindByIDInternal(ctx context.Context, orderID string) (*domain.Order, error) {
+	order := &domain.Order{}
+	err := r.db.QueryRow(ctx, `
+		SELECT id, user_id, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
+		FROM orders
+		WHERE id = $1
+	`, orderID).Scan(
+		&order.ID,
+		&order.UserID,
+		&order.Status,
+		&order.PaymentStatus,
+		&order.TotalAmount,
+		&order.IdempotencyKey,
+		&order.Notes,
+		&order.CreatedAt,
+		&order.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrOrderNotFound
+		}
+		return nil, fmt.Errorf("find order by id internal: %w", err)
+	}
+
+	items, err := r.findItemsByOrderID(ctx, order.ID)
+	if err != nil {
+		return nil, err
+	}
+	order.Items = items
+
+	return order, nil
+}
+
 // FindByID retrieves an order by ID and userID.
 // Ownership enforced in SQL — user A cannot see user B's orders.
 func (r *postgresOrderRepo) FindByID(ctx context.Context, orderID, userID string) (*domain.Order, error) {
@@ -155,6 +190,21 @@ func (r *postgresOrderRepo) FindByUserID(ctx context.Context, userID string) ([]
 	}
 
 	return orders, nil
+}
+
+// UpdateItems persists price and name snapshots for all order items.
+func (r *postgresOrderRepo) UpdateItems(ctx context.Context, items []*domain.OrderItem) error {
+	for _, item := range items {
+		_, err := r.db.Exec(ctx, `
+			UPDATE order_items
+			SET product_name = $1, unit_price = $2, total_price = $3
+			WHERE id = $4
+		`, item.ProductName, item.UnitPrice, item.TotalPrice, item.ID)
+		if err != nil {
+			return fmt.Errorf("update order item %s: %w", item.ID, err)
+		}
+	}
+	return nil
 }
 
 // UpdateStatus updates the status of an order.

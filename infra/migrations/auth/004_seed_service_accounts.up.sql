@@ -12,7 +12,7 @@
 INSERT INTO users (email, password_hash, role)
 VALUES (
     'order-service@internal.retailplatform.com',
-    '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/oK7rkJQyS',
+    '$2a$12$1GzgUdKSmtqLZsYqOyc3QeG/k0lMOtIhAOCNkJaxRcFlBDGV.ae5S',
     'customer'
 )
 ON CONFLICT (email) DO NOTHING;

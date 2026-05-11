@@ -97,7 +97,14 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 		totalAmount = totalAmount.Add(item.TotalPrice)
 	}
 
-	// Step 4 — Reserve stock for each item
+	// Step 4 — Persist price snapshots to order_items
+	if err := p.repo.UpdateItems(ctx, order.Items); err != nil {
+		p.releaseAll(ctx, reserved, orderID)
+		p.failOrder(ctx, orderID, order.UserID, err)
+		return fmt.Errorf("update order items: %w", err)
+	}
+
+	// Step 5 — Reserve stock for each item
 	for _, item := range order.Items {
 		if err := p.inventoryClient.Reserve(ctx, item.ProductID, item.Quantity, orderID); err != nil {
 			// Release all previously reserved items
@@ -132,9 +139,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 // fetchOrder retrieves an order by ID without ownership check.
 // Used internally by the worker — not a user-facing operation.
 func (p *OrderProcessor) fetchOrder(ctx context.Context, orderID string) (*domain.Order, error) {
-	// We pass empty userID to bypass ownership check in the repo
-	// This is safe — only the worker calls this, not HTTP handlers
-	order, err := p.repo.FindByID(ctx, orderID, "")
+	order, err := p.repo.FindByIDInternal(ctx, orderID)
 	if err != nil {
 		return nil, fmt.Errorf("fetch order: %w", err)
 	}

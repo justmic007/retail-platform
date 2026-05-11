@@ -19,6 +19,10 @@ type OrderRepository interface {
 	// FindByID retrieves an order by its ID and userID
 	FindByID(ctx context.Context, orderID, userID string) (*domain.Order, error)
 
+	// FindByIDInternal retrieves an order by ID only — no ownership check.
+	// Used by the worker processor which is an internal process, not a user request.
+	FindByIDInternal(ctx context.Context, orderID string) (*domain.Order, error)
+
 	// FindByUserID retrieves all orders for a given userID, newest first
 	FindByUserID(ctx context.Context, userID string) ([]*domain.Order, error)
 
@@ -29,6 +33,10 @@ type OrderRepository interface {
 	// UpdateStatusAndTotal updates status and total_amount together.
 	// Called when order is CONFIRMED — sets the final calculated total.
 	UpdateStatusAndTotal(ctx context.Context, orderID string, status domain.OrderStatus, total decimal.Decimal) error
+
+	// UpdateItems persists the price and name snapshots for all order items.
+	// Called by the worker after fetching prices from Inventory Service.
+	UpdateItems(ctx context.Context, items []*domain.OrderItem) error
 
 	// FindByIdempotencyKey looks up an order by its idempotency key and UserID
 	// Returns the existing order if found - used to detect duplicate submissions
