@@ -1,0 +1,561 @@
+{
+    "info": {
+        "name": "Retail Platform \u2014 Order Service",
+        "description": "Complete API collection for the Order Service.\n\n**Setup:**\n1. Import this collection\n2. Import the Auth Service collection and run Login \u2014 access_token is shared\n3. Set `base_url` to `http://localhost:8081`\n4. Run `make run-auth`, `make run-inventory`, and `make run-order`\n5. Run `make migrate-all` to set up the databases",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    },
+    "variable": [
+        {
+            "key": "base_url",
+            "value": "{{order_base_url}}",
+            "description": "Resolved from the Retail Platform environment"
+        },
+        {
+            "key": "order_id",
+            "value": "",
+            "description": "Order ID \u2014 auto-populated by Create Order request"
+        }
+    ],
+    "item": [
+        {
+            "name": "Health",
+            "item": [
+                {
+                    "name": "Health Check",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "pm.test('Service is order', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.service).to.equal('order');",
+                                    "    pm.expect(body.status).to.equal('ok');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/health",
+                        "description": "Liveness probe. Returns 200 if the service process is running."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"service\": \"order\",\n  \"status\": \"ok\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Readiness Check",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/ready",
+                        "description": "Readiness probe. Returns 200 if the service is ready to handle traffic."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Orders",
+            "item": [
+                {
+                    "name": "Create Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 202 Accepted', function() {",
+                                    "    pm.response.to.have.status(202);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has order and message', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('order');",
+                                    "    pm.expect(body).to.have.property('message');",
+                                    "    pm.expect(body.message).to.equal('order received and is being processed');",
+                                    "});",
+                                    "",
+                                    "pm.test('Order has id and PENDING status', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.order).to.have.property('id');",
+                                    "    pm.expect(body.order.status).to.equal('PENDING');",
+                                    "});",
+                                    "",
+                                    "// Auto-save order_id for use in other requests",
+                                    "const body = pm.response.json();",
+                                    "if (body.order && body.order.id) {",
+                                    "    pm.collectionVariables.set('order_id', body.order.id);",
+                                    "    console.log('order_id saved:', body.order.id);",
+                                    "}"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"idempotency_key\": \"postman-order-001\",\n  \"items\": [\n    {\n      \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n      \"quantity\": 2\n    },\n    {\n      \"product_id\": \"a1b2c3d4-0003-0003-0003-000000000003\",\n      \"quantity\": 3\n    }\n  ],\n  \"notes\": \"Please handle with care\"\n}"
+                        },
+                        "description": "Creates a new order and submits it to the worker pool for async processing.\n\n**Returns 202 Accepted immediately** \u2014 the order is saved as PENDING and processing happens in the background.\n\n**Idempotency:** The `idempotency_key` prevents duplicate orders. If you submit the same key twice, the second request returns the existing order silently.\n\n**Async flow:**\n1. Order saved as PENDING\n2. Worker fetches prices from Inventory Service\n3. Worker reserves stock\n4. Order updated to CONFIRMED with total_amount\n\nPoll GET /orders/:id to check the final status."
+                    },
+                    "response": [
+                        {
+                            "name": "202 Accepted",
+                            "status": "Accepted",
+                            "code": 202,
+                            "body": "{\n  \"message\": \"order received and is being processed\",\n  \"order\": {\n    \"id\": \"c5a465e1-077c-4d55-8c59-8bb576a76b3c\",\n    \"user_id\": \"5d81fc13-0ebc-477e-b898-26109eea2a75\",\n    \"status\": \"PENDING\",\n    \"payment_status\": \"UNPAID\",\n    \"total_amount\": \"0\",\n    \"idempotency_key\": \"postman-order-001\",\n    \"notes\": \"Please handle with care\",\n    \"items\": [\n      {\n        \"id\": \"9c63be7f-088a-4554-b045-ea1204741a3e\",\n        \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n        \"product_name\": \"\",\n        \"quantity\": 2,\n        \"unit_price\": \"0\",\n        \"total_price\": \"0\"\n      }\n    ],\n    \"created_at\": \"2026-05-11T07:38:09.568478+01:00\",\n    \"updated_at\": \"2026-05-11T07:38:09.568478+01:00\"\n  }\n}"
+                        },
+                        {
+                            "name": "400 Bad Request \u2014 missing items",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "body": "{\n  \"code\": \"VALIDATION_ERROR\",\n  \"error\": \"field 'items' failed validation: min\"\n}"
+                        },
+                        {
+                            "name": "401 Unauthorized \u2014 no token",
+                            "status": "Unauthorized",
+                            "code": 401,
+                            "body": "{\n  \"code\": \"UNAUTHORIZED\",\n  \"error\": \"authorization header is required\"\n}"
+                        },
+                        {
+                            "name": "500 Internal Server Error \u2014 worker pool full",
+                            "status": "Internal Server Error",
+                            "code": 500,
+                            "body": "{\n  \"code\": \"INTERNAL_ERROR\",\n  \"error\": \"server is busy, please try again\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Get Order by ID",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has order object', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('order');",
+                                    "    pm.expect(body.order).to.have.property('id');",
+                                    "    pm.expect(body.order).to.have.property('status');",
+                                    "    pm.expect(body.order).to.have.property('total_amount');",
+                                    "    pm.expect(body.order).to.have.property('items');",
+                                    "});",
+                                    "",
+                                    "pm.test('Order is CONFIRMED with price snapshots', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    if (body.order.status === 'CONFIRMED') {",
+                                    "        pm.expect(body.order.total_amount).to.not.equal('0');",
+                                    "        body.order.items.forEach(item => {",
+                                    "            pm.expect(item.product_name).to.not.equal('');",
+                                    "            pm.expect(item.unit_price).to.not.equal('0');",
+                                    "        });",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/orders/{{order_id}}",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Returns a single order with full item details.\n\n**Ownership enforced** \u2014 users can only see their own orders. Requesting another user's order returns 404 (not 403) to prevent information leakage.\n\n**Run this after Create Order** to see the order move from PENDING \u2192 CONFIRMED with price snapshots populated."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK \u2014 CONFIRMED",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"order\": {\n    \"id\": \"c5a465e1-077c-4d55-8c59-8bb576a76b3c\",\n    \"user_id\": \"5d81fc13-0ebc-477e-b898-26109eea2a75\",\n    \"status\": \"CONFIRMED\",\n    \"payment_status\": \"UNPAID\",\n    \"total_amount\": \"254.95\",\n    \"idempotency_key\": \"postman-order-001\",\n    \"notes\": \"Please handle with care\",\n    \"items\": [\n      {\n        \"id\": \"9c63be7f-088a-4554-b045-ea1204741a3e\",\n        \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n        \"product_name\": \"Sunflower Oil 2L\",\n        \"quantity\": 2,\n        \"unit_price\": \"89.99\",\n        \"total_price\": \"179.98\"\n      },\n      {\n        \"id\": \"012c6f8f-a1e7-40de-9efc-91212f1d549e\",\n        \"product_id\": \"a1b2c3d4-0003-0003-0003-000000000003\",\n        \"product_name\": \"Full Cream Milk 1L\",\n        \"quantity\": 3,\n        \"unit_price\": \"24.99\",\n        \"total_price\": \"74.97\"\n      }\n    ],\n    \"created_at\": \"2026-05-11T07:38:09.568478+01:00\",\n    \"updated_at\": \"2026-05-11T07:38:09.648902+01:00\"\n  }\n}"
+                        },
+                        {
+                            "name": "404 Not Found",
+                            "status": "Not Found",
+                            "code": 404,
+                            "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"error\": \"order not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "List Orders",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response has orders array and total', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body).to.have.property('orders');",
+                                    "    pm.expect(body).to.have.property('total');",
+                                    "    pm.expect(body.orders).to.be.an('array');",
+                                    "});",
+                                    "",
+                                    "pm.test('All orders belong to authenticated user', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    const userID = pm.environment.get('user_id');",
+                                    "    if (userID) {",
+                                    "        body.orders.forEach(order => {",
+                                    "            pm.expect(order.user_id).to.equal(userID);",
+                                    "        });",
+                                    "    }",
+                                    "});",
+                                    "",
+                                    "pm.test('Orders are sorted newest first', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    if (body.orders.length > 1) {",
+                                    "        const first = new Date(body.orders[0].created_at);",
+                                    "        const second = new Date(body.orders[1].created_at);",
+                                    "        pm.expect(first >= second).to.be.true;",
+                                    "    }",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Returns all orders for the authenticated user, newest first.\n\n**Note:** Items are not included in the list response \u2014 only order-level data. Use GET /orders/:id to get full item details for a specific order."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"orders\": [\n    {\n      \"id\": \"c5a465e1-077c-4d55-8c59-8bb576a76b3c\",\n      \"status\": \"CONFIRMED\",\n      \"total_amount\": \"254.95\",\n      \"created_at\": \"2026-05-11T07:38:09.568478+01:00\"\n    }\n  ],\n  \"total\": 1\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Cancel Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 200 OK', function() {",
+                                    "    pm.response.to.have.status(200);",
+                                    "});",
+                                    "",
+                                    "pm.test('Response confirms cancellation', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.message).to.equal('order cancelled successfully');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/orders/{{order_id}}/cancel",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Cancels a PENDING order.\n\n**Only PENDING orders can be cancelled.** CONFIRMED orders require a refund flow. FAILED and CANCELLED orders are terminal.\n\n**Ownership enforced** \u2014 users can only cancel their own orders."
+                    },
+                    "response": [
+                        {
+                            "name": "200 OK",
+                            "status": "OK",
+                            "code": 200,
+                            "body": "{\n  \"message\": \"order cancelled successfully\"\n}"
+                        },
+                        {
+                            "name": "400 Bad Request \u2014 cannot cancel non-pending order",
+                            "status": "Bad Request",
+                            "code": 400,
+                            "body": "{\n  \"code\": \"BAD_REQUEST\",\n  \"error\": \"only pending orders can be cancelled\"\n}"
+                        },
+                        {
+                            "name": "404 Not Found \u2014 order not found or wrong user",
+                            "status": "Not Found",
+                            "code": 404,
+                            "body": "{\n  \"code\": \"NOT_FOUND\",\n  \"error\": \"order not found\"\n}"
+                        }
+                    ]
+                },
+                {
+                    "name": "Cancel Order \u2014 already CONFIRMED (should 400)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for non-pending order', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is BAD_REQUEST', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('BAD_REQUEST');",
+                                    "    pm.expect(body.error).to.equal('only pending orders can be cancelled');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "PATCH",
+                        "url": "{{base_url}}/orders/{{order_id}}/cancel",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            }
+                        ],
+                        "description": "Verifies that a CONFIRMED order cannot be cancelled. Run this after the order has been confirmed by the worker."
+                    }
+                },
+                {
+                    "name": "Create Order \u2014 idempotency (same key returns same order)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Status is 202 Accepted', function() {",
+                                    "    pm.response.to.have.status(202);",
+                                    "});",
+                                    "",
+                                    "pm.test('Returns same order ID as first request', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    const savedOrderID = pm.collectionVariables.get('order_id');",
+                                    "    pm.expect(body.order.id).to.equal(savedOrderID);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"idempotency_key\": \"postman-order-001\",\n  \"items\": [\n    {\n      \"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\",\n      \"quantity\": 2\n    }\n  ]\n}"
+                        },
+                        "description": "Submits the same idempotency key as the first Create Order request. The server returns the existing order instead of creating a duplicate.\n\nRun Create Order first, then run this \u2014 both should return the same order ID."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Security Tests",
+            "item": [
+                {
+                    "name": "Create Order \u2014 no token (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});",
+                                    "",
+                                    "pm.test('Error code is UNAUTHORIZED', function() {",
+                                    "    const body = pm.response.json();",
+                                    "    pm.expect(body.code).to.equal('UNAUTHORIZED');",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"idempotency_key\": \"test\",\n  \"items\": [{\"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\", \"quantity\": 1}]\n}"
+                        },
+                        "description": "Verifies that AuthMiddleware blocks unauthenticated requests."
+                    }
+                },
+                {
+                    "name": "Get Order \u2014 no token (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 without token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/orders/{{order_id}}",
+                        "description": "Verifies that GET /orders/:id requires authentication."
+                    }
+                },
+                {
+                    "name": "Get Order \u2014 invalid token (should 401)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 401 for invalid token', function() {",
+                                    "    pm.response.to.have.status(401);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "url": "{{base_url}}/orders/{{order_id}}",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer this.is.not.a.valid.token"
+                            }
+                        ],
+                        "description": "Verifies that a malformed or tampered JWT returns 401."
+                    }
+                },
+                {
+                    "name": "Create Order \u2014 empty items (should 400)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for empty items', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"idempotency_key\": \"test-empty\",\n  \"items\": []\n}"
+                        },
+                        "description": "An order with zero items should be rejected at validation."
+                    }
+                },
+                {
+                    "name": "Create Order \u2014 missing idempotency key (should 400)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "pm.test('Returns 400 for missing idempotency key', function() {",
+                                    "    pm.response.to.have.status(400);",
+                                    "});"
+                                ]
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "url": "{{base_url}}/orders",
+                        "header": [
+                            {
+                                "key": "Authorization",
+                                "value": "Bearer {{access_token}}"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"items\": [{\"product_id\": \"a1b2c3d4-0001-0001-0001-000000000001\", \"quantity\": 1}]\n}"
+                        },
+                        "description": "Verifies that idempotency_key is required."
+                    }
+                }
+            ]
+        }
+    ]
+}

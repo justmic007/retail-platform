@@ -94,8 +94,15 @@ rollback-inventory:
 	migrate -path infra/migrations/inventory -database "$(POSTGRES_BASE)/inventory_db?sslmode=disable" down 1
 
 # ── Testing ───────────────────────────────────────────────────────────────────
+
+test-auth:
+	cd services/auth && go test -race ./... -v
+	
 test-inventory:
 	cd services/inventory && go test -race ./... -v
+
+test-order:
+	cd services/order && go test -race ./... -v
 
 test:
 	cd pkg && go test ./...
@@ -112,8 +119,6 @@ test-race:
 	cd services/inventory && go test -race ./...
 	cd services/notification && go test -race ./...
 
-test-auth:
-	cd services/auth && go test -race ./... -v
 
 test-coverage:
 	cd services/auth && go test -race -coverprofile=coverage.out ./...
@@ -124,7 +129,10 @@ test-coverage:
 # ── Code quality ──────────────────────────────────────────────────────────────
 
 lint:
-	golangci-lint run ./...
+	@grep -E '^\s+\.' go.work | tr -d ' \t' | sed 's|^\./||' | while read dir; do \
+		echo "--- Linting $$dir ---"; \
+		(cd $$dir && golangci-lint run --timeout=5m ./...); \
+	done
 
 # gofmt formats code. In Go, formatting is not a style preference — it's enforced.
 fmt:
