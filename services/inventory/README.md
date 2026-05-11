@@ -29,7 +29,8 @@ Production-grade inventory management service built in Go. Manages the product c
 │                      INVENTORY SERVICE                               │
 │                        Port: 8082                                    │
 │                                                                      │
-│  Router → AuthMiddleware → Handler → Service                        │
+│  Router → [public routes: no auth] → Handler → Service               │
+│        → [protected routes: AuthMiddleware] → Handler → Service      │
 │                                   │                                  │
 │                         ┌─────────┴──────────┐                      │
 │                         │                    │                       │
@@ -519,6 +520,8 @@ CREATE INDEX idx_stock_product_id ON stock_levels(product_id);
 ## API Reference
 
 All endpoints require a valid JWT issued by Auth Service (`Authorization: Bearer <token>`).
+
+**Note:** `GET /products`, `GET /products/:id`, and `GET /products/:id/stock` are public — no token required. `POST /inventory/reserve`, `POST /inventory/release`, and `PATCH /products/:id/stock` require a valid JWT.
 
 ### GET /products
 
