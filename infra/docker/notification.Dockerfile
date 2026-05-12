@@ -22,8 +22,11 @@ WORKDIR /app
 COPY go.work go.work.sum ./
 
 # Copy all go.mod files so Docker can cache dependency downloads
-# If go.mod files don't change, Docker uses cached layers — faster builds
+# go.work references all modules — all go.mod files must be present
 COPY pkg/go.mod pkg/go.sum ./pkg/
+COPY services/auth/go.mod services/auth/go.sum ./services/auth/
+COPY services/order/go.mod services/order/go.sum ./services/order/
+COPY services/inventory/go.mod services/inventory/go.sum ./services/inventory/
 COPY services/notification/go.mod services/notification/go.sum ./services/notification/
 
 # Download dependencies (cached unless go.mod changes)
