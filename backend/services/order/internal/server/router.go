@@ -15,6 +15,7 @@ func NewRouter(h *handler.OrderHandler, jwtManager *jwt.Manager) *gin.Engine {
 	r := gin.New()
 
 	r.Use(middleware.RequestID())
+	r.Use(middleware.CORS())
 	r.Use(gin.Recovery())
 
 	// Health endpoints — no auth required

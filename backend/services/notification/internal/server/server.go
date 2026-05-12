@@ -27,12 +27,22 @@ func New(cfg *config.Config, log *logger.Logger) *Server {
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w, r)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"service":"notification","status":"ok"}`))
 	})
 
 	mux.HandleFunc("/ready", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w, r)
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"service":"notification","status":"ready"}`))
@@ -50,7 +60,16 @@ func New(cfg *config.Config, log *logger.Logger) *Server {
 	}
 }
 
-// Run starts the HTTP server and blocks until shutdown signal.
+// setCORSHeaders sets CORS headers for the notification service's plain net/http handlers.
+func setCORSHeaders(w http.ResponseWriter, r *http.Request) {
+	origin := os.Getenv("ALLOWED_ORIGIN")
+	if origin == "" {
+		origin = "http://localhost:3000"
+	}
+	w.Header().Set("Access-Control-Allow-Origin", origin)
+	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+	w.Header().Set("Access-Control-Allow-Headers", "Origin, Content-Type, Authorization")
+}
 func (s *Server) Run() error {
 	serverErr := make(chan error, 1)
 	go func() {
