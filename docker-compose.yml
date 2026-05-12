@@ -37,7 +37,7 @@ services:
     networks:
       - retail-net
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U retail"]
+      test: ["CMD-SHELL", "pg_isready -U retail -d auth_db"]
       interval: 10s
       timeout: 5s
       retries: 5
