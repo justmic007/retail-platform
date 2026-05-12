@@ -96,7 +96,7 @@ func (s *AuthService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 		return nil, domain.ErrEmailNotVerified
 	}
 
-	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role))
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role), user.EmailVerified)
 	if err != nil {
 		return nil, fmt.Errorf("generate access token: %w", err)
 	}
@@ -172,7 +172,7 @@ func (s *AuthService) Refresh(ctx context.Context, req domain.RefreshRequest) (*
 		return nil, fmt.Errorf("refresh - delete old token: %w", err)
 	}
 
-	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role))
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role), user.EmailVerified)
 	if err != nil {
 		return nil, fmt.Errorf("refresh - generate access token: %w", err)
 	}

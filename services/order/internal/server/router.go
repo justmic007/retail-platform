@@ -21,9 +21,10 @@ func NewRouter(h *handler.OrderHandler, jwtManager *jwt.Manager) *gin.Engine {
 	r.GET("/health", h.Health)
 	r.GET("/ready", h.Ready)
 
-	// All order routes require a valid JWT
+	// All order routes require a valid JWT and a verified email
 	protected := r.Group("/")
 	protected.Use(middleware.AuthMiddleware(jwtManager))
+	protected.Use(middleware.RequireEmailVerified())
 	{
 		protected.POST("/orders", h.CreateOrder)
 		protected.GET("/orders", h.ListOrders)
