@@ -126,7 +126,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 	}
 
 	// Step 7 — Publish OrderConfirmed event
-	p.publishOrderEvent(ctx, events.EventOrderConfirmed, orderID, order.UserID, order.UserEmail, totalAmount)
+	p.publishOrderEvent(ctx, events.EventOrderConfirmed, orderID, order.UserID, order.UserEmail, totalAmount, order.Items)
 
 	p.log.Info().
 		Str("order_id", orderID).
@@ -168,20 +168,28 @@ func (p *OrderProcessor) failOrder(ctx context.Context, orderID, userID, userEma
 		p.log.Error().Err(err).Str("order_id", orderID).Msg("failed to update order status to FAILED")
 	}
 
-	p.publishOrderEvent(ctx, events.EventOrderFailed, orderID, userID, "", decimal.Zero)
+	p.publishOrderEvent(ctx, events.EventOrderFailed, orderID, userID, userEmail, decimal.Zero, nil)
 }
 
 // publishOrderEvent publishes an order event to the event bus non-blocking.
-// If the publish fails the error is logged — notifications are best-effort.
-func (p *OrderProcessor) publishOrderEvent(ctx context.Context, eventType events.EventType, orderID, userID, userEmail string, total decimal.Decimal) {
-	if err := p.eventBus.PublishOrder(ctx, events.OrderEvent{
+func (p *OrderProcessor) publishOrderEvent(ctx context.Context, eventType events.EventType, orderID, userID, userEmail string, total decimal.Decimal, items []*domain.OrderItem) {
+	event := events.OrderEvent{
 		Type:       eventType,
 		OrderID:    orderID,
 		UserID:     userID,
 		UserEmail:  userEmail,
 		Total:      total.InexactFloat64(),
 		OccurredAt: time.Now(),
-	}); err != nil {
+	}
+	for _, item := range items {
+		event.Items = append(event.Items, events.OrderItem{
+			ProductName: item.ProductName,
+			Quantity:    item.Quantity,
+			UnitPrice:   item.UnitPrice.InexactFloat64(),
+			TotalPrice:  item.TotalPrice.InexactFloat64(),
+		})
+	}
+	if err := p.eventBus.PublishOrder(ctx, event); err != nil {
 		p.log.Warn().Err(err).Str("order_id", orderID).Msg("failed to publish order event")
 	}
 }
