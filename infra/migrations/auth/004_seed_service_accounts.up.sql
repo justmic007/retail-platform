@@ -9,10 +9,11 @@
 -- Store the real password in ORDER_SERVICE_PASSWORD env var.
 -- NEVER commit the plain text password.
 
-INSERT INTO users (email, password_hash, role)
+INSERT INTO users (email, password_hash, role, email_verified)
 VALUES (
     'order-service@internal.retailplatform.com',
     '$2a$12$1GzgUdKSmtqLZsYqOyc3QeG/k0lMOtIhAOCNkJaxRcFlBDGV.ae5S',
-    'customer'
+    'customer',
+    TRUE
 )
 ON CONFLICT (email) DO NOTHING;

@@ -40,11 +40,25 @@ type UserRepository interface {
 	// UpdateRole updates the role of a user.
 	UpdateRole(ctx context.Context, userID, role string) error
 
-	// Change password interface
+	// UpdatePassword updates a user's password hash.
 	UpdatePassword(ctx context.Context, userID, passwordHash string) error
+
+	// MarkEmailVerified sets email_verified = true for a user.
+	MarkEmailVerified(ctx context.Context, userID string) error
 }
 
-// TokenRepository defines all database operations for refresh tokens.
+// VerificationTokenRepository defines operations for email verification tokens.
+type VerificationTokenRepository interface {
+	// Store saves a new verification token for a user.
+	Store(ctx context.Context, userID, token string, expiry time.Time) error
+
+	// FindUserID looks up a token and returns the owning user's ID.
+	// Returns ErrInvalidVerificationToken if not found or expired.
+	FindUserID(ctx context.Context, token string) (userID string, err error)
+
+	// Delete removes a verification token after it has been used.
+	Delete(ctx context.Context, token string) error
+}
 // Refresh tokens are stored in the database so they can be invalidated
 // server-side (unlike JWTs which are stateless and cannot be revoked).
 type TokenRepository interface {

@@ -54,14 +54,10 @@ func (r *postgresUserRepo) Create(ctx context.Context, user *domain.User) (*doma
 	query := `
 		INSERT INTO users (email, password_hash, role)
 		VALUES ($1, $2, $3)
-		RETURNING id, email, password_hash, role, created_at, updated_at
+		RETURNING id, email, password_hash, role, email_verified, created_at, updated_at
 	`
 
 	created := &domain.User{}
-
-	// QueryRow executes a query expected to return one row.
-	// Scan reads the returned columns into Go variables.
-	// The order of Scan arguments MUST match the RETURNING column order.
 	err := r.db.QueryRow(ctx, query,
 		user.Email,
 		user.PasswordHash,
@@ -71,6 +67,7 @@ func (r *postgresUserRepo) Create(ctx context.Context, user *domain.User) (*doma
 		&created.Email,
 		&created.PasswordHash,
 		&created.Role,
+		&created.EmailVerified,
 		&created.CreatedAt,
 		&created.UpdatedAt,
 	)
@@ -92,7 +89,7 @@ func (r *postgresUserRepo) Create(ctx context.Context, user *domain.User) (*doma
 // Used on every login attempt.
 func (r *postgresUserRepo) FindByEmail(ctx context.Context, email string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password_hash, role, created_at, updated_at
+		SELECT id, email, password_hash, role, email_verified, created_at, updated_at
 		FROM users
 		WHERE email = $1
 	`
@@ -103,6 +100,7 @@ func (r *postgresUserRepo) FindByEmail(ctx context.Context, email string) (*doma
 		&user.Email,
 		&user.PasswordHash,
 		&user.Role,
+		&user.EmailVerified,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -124,7 +122,7 @@ func (r *postgresUserRepo) FindByEmail(ctx context.Context, email string) (*doma
 // Used by the /me endpoint to get the current user's profile.
 func (r *postgresUserRepo) FindByID(ctx context.Context, id string) (*domain.User, error) {
 	query := `
-		SELECT id, email, password_hash, role, created_at, updated_at
+		SELECT id, email, password_hash, role, email_verified, created_at, updated_at
 		FROM users
 		WHERE id = $1
 	`
@@ -135,6 +133,7 @@ func (r *postgresUserRepo) FindByID(ctx context.Context, id string) (*domain.Use
 		&user.Email,
 		&user.PasswordHash,
 		&user.Role,
+		&user.EmailVerified,
 		&user.CreatedAt,
 		&user.UpdatedAt,
 	)
@@ -157,7 +156,7 @@ func (r *postgresUserRepo) UpdateRole(ctx context.Context, userID, role string) 
 	return err
 }
 
-// Update password implementation
+// UpdatePassword updates a user's password hash.
 func (r *postgresUserRepo) UpdatePassword(ctx context.Context, userID, hash string) error {
 	_, err := r.db.Exec(ctx,
 		"UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2",
@@ -166,7 +165,59 @@ func (r *postgresUserRepo) UpdatePassword(ctx context.Context, userID, hash stri
 	return err
 }
 
-// ── Token Repository ──────────────────────────────────────────────────────────
+// MarkEmailVerified sets email_verified = true for a user.
+func (r *postgresUserRepo) MarkEmailVerified(ctx context.Context, userID string) error {
+	_, err := r.db.Exec(ctx,
+		"UPDATE users SET email_verified = TRUE, updated_at = NOW() WHERE id = $1",
+		userID,
+	)
+	return err
+}
+
+// ── Verification Token Repository ─────────────────────────────────────────────
+
+type postgresVerificationTokenRepo struct {
+	db *pgxpool.Pool
+}
+
+// NewPostgresVerificationTokenRepo creates a new verification token repository.
+func NewPostgresVerificationTokenRepo(db *pgxpool.Pool) VerificationTokenRepository {
+	return &postgresVerificationTokenRepo{db: db}
+}
+
+func (r *postgresVerificationTokenRepo) Store(ctx context.Context, userID, token string, expiry time.Time) error {
+	_, err := r.db.Exec(ctx,
+		`INSERT INTO email_verification_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)`,
+		userID, token, expiry,
+	)
+	if err != nil {
+		return fmt.Errorf("store verification token: %w", err)
+	}
+	return nil
+}
+
+func (r *postgresVerificationTokenRepo) FindUserID(ctx context.Context, token string) (string, error) {
+	var userID string
+	err := r.db.QueryRow(ctx,
+		`SELECT user_id FROM email_verification_tokens WHERE token = $1 AND expires_at > NOW()`,
+		token,
+	).Scan(&userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return "", domain.ErrInvalidVerificationToken
+		}
+		return "", fmt.Errorf("find verification token: %w", err)
+	}
+	return userID, nil
+}
+
+func (r *postgresVerificationTokenRepo) Delete(ctx context.Context, token string) error {
+	_, err := r.db.Exec(ctx,
+		`DELETE FROM email_verification_tokens WHERE token = $1`,
+		token,
+	)
+	return err
+}
 
 type postgresTokenRepo struct {
 	db *pgxpool.Pool

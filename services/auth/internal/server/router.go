@@ -41,6 +41,8 @@ func NewRouter(h *handler.AuthHandler, jwtManager *jwt.Manager) *gin.Engine {
 		public.POST("/register", h.Register)
 		public.POST("/login", h.Login)
 		public.POST("/refresh", h.Refresh)
+		public.GET("/verify", h.VerifyEmail)
+		public.POST("/resend-verification", h.ResendVerification)
 	}
 
 	// ── Protected auth routes — valid JWT required ─────────────────────────

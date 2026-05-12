@@ -1,6 +1,4 @@
 // Package main is the entry point for the Auth Service.
-// This file is the COMPOSITION ROOT — the single place where all
-// dependencies are created and wired together.
 package main
 
 import (
@@ -14,28 +12,20 @@ import (
 	"retail-platform/auth/internal/service"
 	"retail-platform/pkg/jwt"
 	"retail-platform/pkg/logger"
+	"retail-platform/pkg/mailer"
 	"retail-platform/pkg/validator"
 
-	// godotenv loads .env file into environment variables.
-	// The _ = means we ignore the error intentionally —
-	// in production there is no .env file and that is fine.
-	// Real production env vars are injected by the platform (Railway, GCP).
 	"github.com/joho/godotenv"
 )
 
 func main() {
-	// Load .env file if present (local development only)
-	// Must be called BEFORE config.Load() so env vars are available
 	_ = godotenv.Load()
 
-	// Step 1: Load config — exits if required env vars are missing
 	cfg := config.Load()
 
-	// Step 2: Structured logger
 	log := logger.New("auth-service")
 	log.Info().Str("env", cfg.AppEnv).Msg("starting auth service")
 
-	// Step 3: Database connection pool — pings DB, fails fast if unreachable
 	ctx := context.Background()
 	db, err := database.NewPool(ctx, cfg)
 	if err != nil {
@@ -43,26 +33,22 @@ func main() {
 	}
 	log.Info().Msg("database connection pool established")
 
-	// Step 4: JWT Manager — signing secret + TTL config
 	jwtManager := jwt.NewManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 
-	// Step 5: Repositories — return interfaces, not concrete types
 	userRepo := repository.NewPostgresUserRepo(db)
 	tokenRepo := repository.NewPostgresTokenRepo(db)
+	verificationRepo := repository.NewPostgresVerificationTokenRepo(db)
 
-	// Step 6: Validator
+	m := mailer.New(cfg.BrevoAPIKey, cfg.EmailFrom, cfg.EmailFromName)
+
 	v := validator.New()
 
-	// Step 7: Service — receives all dependencies via constructor
-	authService := service.NewAuthService(userRepo, tokenRepo, jwtManager, cfg, log)
+	authService := service.NewAuthService(userRepo, tokenRepo, verificationRepo, jwtManager, m, cfg, log)
 
-	// Step 8: Handler — thin HTTP layer
 	authHandler := handler.NewAuthHandler(authService, v, log)
 
-	// Step 9: Router — registers routes + middleware chain
 	router := server.NewRouter(authHandler, jwtManager)
 
-	// Step 10: Server — starts HTTP server, blocks until SIGTERM/SIGINT
 	srv := server.New(router, db, cfg, log)
 	if err := srv.Run(); err != nil {
 		log.Fatal().Err(err).Msg("server error")

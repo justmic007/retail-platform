@@ -38,4 +38,16 @@ var (
 		Code:    errors.ErrCodeUnauthorized,
 		Message: "token has expired",
 	}
+
+	// ErrEmailNotVerified is returned when a user tries to login without verifying their email.
+	ErrEmailNotVerified = &errors.AppError{
+		Code:    errors.ErrCodeForbidden,
+		Message: "please verify your email address before logging in",
+	}
+
+	// ErrInvalidVerificationToken is returned when the verification token is invalid or expired.
+	ErrInvalidVerificationToken = &errors.AppError{
+		Code:    errors.ErrCodeBadRequest,
+		Message: "invalid or expired verification token",
+	}
 )
