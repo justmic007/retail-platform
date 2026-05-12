@@ -24,9 +24,7 @@ func NewRouter(h *handler.AuthHandler, jwtManager *jwt.Manager) *gin.Engine {
 
 	// 1. RequestID — generate unique ID per request
 	r.Use(middleware.RequestID())
-
-	// 2. Recovery — catches panics and returns 500 instead of crashing.
-	// Must be after RequestID so recovery logs include the request ID.
+	r.Use(middleware.CORS())
 	r.Use(gin.Recovery())
 
 	// ── Health endpoints — no auth, no rate limiting ───────────────────────

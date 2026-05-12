@@ -30,6 +30,7 @@ jobs:
 
       - name: Run golangci-lint
         run: |
+          cd backend
           grep -E '^\s+\.' go.work | tr -d ' \t' | sed 's|^\./||' | while read dir; do
             echo "--- Linting $dir ---"
             (cd $dir && golangci-lint run --timeout=5m ./...)
@@ -80,31 +81,31 @@ jobs:
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE inventory_db;"
 
       - name: Run tests — pkg
-        run: cd pkg && go test -race -count=1 -timeout 120s ./...
+        run: cd backend/pkg && go test -race -count=1 -timeout 120s ./...
         env:
           JWT_SECRET: test-secret-for-ci-only
 
       - name: Run tests — auth
-        run: cd services/auth && go test -race -count=1 -timeout 120s ./...
+        run: cd backend/services/auth && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/auth_db?sslmode=disable
           JWT_SECRET: test-secret-for-ci-only
 
       - name: Run tests — order
-        run: cd services/order && go test -race -count=1 -timeout 120s ./...
+        run: cd backend/services/order && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/order_db?sslmode=disable
           JWT_SECRET: test-secret-for-ci-only
 
       - name: Run tests — inventory
-        run: cd services/inventory && go test -race -count=1 -timeout 120s ./...
+        run: cd backend/services/inventory && go test -race -count=1 -timeout 120s ./...
         env:
           DATABASE_URL: postgres://retail:retailsecret@localhost:5432/inventory_db?sslmode=disable
           REDIS_URL: redis://localhost:6379/0
           JWT_SECRET: test-secret-for-ci-only
 
       - name: Run tests — notification
-        run: cd services/notification && go test -race -count=1 -timeout 120s ./...
+        run: cd backend/services/notification && go test -race -count=1 -timeout 120s ./...
         env:
           JWT_SECRET: test-secret-for-ci-only
 
@@ -125,7 +126,7 @@ jobs:
 
       - name: Build all services
         run: |
-          cd services/auth && go build ./cmd/server/...
+          cd backend/services/auth && go build ./cmd/server/...
           cd ../../services/order && go build ./cmd/server/...
           cd ../../services/inventory && go build ./cmd/server/...
           cd ../../services/notification && go build ./cmd/server/...
