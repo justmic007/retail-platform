@@ -85,6 +85,10 @@ Publishes to Redis: events:orders
   "user_id": "5d81fc13-...",
   "user_email": "customer@example.com",   ← from JWT, cryptographically verified
   "total": 254.95,
+  "items": [
+    {"product_name": "Sunflower Oil 2L", "quantity": 2, "unit_price": 89.99, "total_price": 179.98},
+    {"product_name": "Full Cream Milk 1L", "quantity": 3, "unit_price": 24.99, "total_price": 74.97}
+  ],
   "occurred_at": "2026-05-12T09:27:00Z"
 }
         │
@@ -168,15 +172,30 @@ safeHandle wraps fn() with defer/recover:
 
 ### EmailHandler
 
-Sends transactional emails to customers. Three methods:
+Sends transactional emails to customers via Brevo. Three methods:
 
-| Method | Trigger | Subject |
-|---|---|---|
-| `SendOrderConfirmation` | `ORDER_CONFIRMED` | Your order has been confirmed |
-| `SendOrderFailed` | `ORDER_FAILED` | Your order could not be processed |
-| `SendOrderCancelled` | `ORDER_CANCELLED` | Your order has been cancelled |
+| Method | Trigger | Subject | Body |
+|---|---|---|---|
+| `SendOrderConfirmation` | `ORDER_CONFIRMED` | Your order has been confirmed | Order reference, items table (name, qty, unit price, total), grand total |
+| `SendOrderFailed` | `ORDER_FAILED` | Your order could not be processed | Order reference, no payment taken message |
+| `SendOrderCancelled` | `ORDER_CANCELLED` | Your order has been cancelled | Order reference, cancellation confirmation |
 
 The `to` address is `event.UserEmail` — extracted from the JWT by Order Service at order creation time. The customer cannot supply their own email address.
+
+The order confirmation email renders a bordered HTML table of line items:
+
+```
+Your order #dd952859 has been confirmed.
+
+┌─────────────────────┬─────┬────────────┬──────────┐
+│ Item                │ Qty │ Unit Price │ Total    │
+├─────────────────────┼─────┼────────────┼──────────┤
+│ Sunflower Oil 2L    │  2  │ R89.99     │ R179.98  │
+│ Full Cream Milk 1L  │  3  │ R24.99     │ R74.97   │
+└─────────────────────┴─────┴────────────┴──────────┘
+
+Total: R254.95
+```
 
 ### InternalHandler
 
@@ -242,6 +261,11 @@ Published by Order Service.
 | `user_id` | string | UUID of the customer |
 | `user_email` | string | Customer email — from JWT, not client input |
 | `total` | float64 | Order total in ZAR |
+| `items` | array | Line items — only populated on `ORDER_CONFIRMED` |
+| `items[].product_name` | string | Product name snapshot at order time |
+| `items[].quantity` | int | Units ordered |
+| `items[].unit_price` | float64 | Price per unit at order time |
+| `items[].total_price` | float64 | quantity × unit_price |
 | `occurred_at` | time | When the event was published |
 
 ### StockEvent (channel: `events:stock`)

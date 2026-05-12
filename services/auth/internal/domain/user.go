@@ -27,12 +27,13 @@ type PromoteRequest struct {
 // This struct is used INSIDE the service — it contains PasswordHash
 // which must NEVER be sent to the client.
 type User struct {
-	ID           string
-	Email        string
-	PasswordHash string // internal only — never serialise this to JSON
-	Role         Role
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID            string
+	Email         string
+	PasswordHash  string // internal only — never serialise this to JSON
+	Role          Role
+	EmailVerified bool
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 // ChangePasswordRequest is the body for POST /auth/change-password
@@ -45,10 +46,11 @@ type ChangePasswordRequest struct {
 // It deliberately has no PasswordHash field — it physically cannot
 // be included in a response because it doesn't exist on this struct.
 type UserResponse struct {
-	ID        string    `json:"id"`
-	Email     string    `json:"email"`
-	Role      Role      `json:"role"`
-	CreatedAt time.Time `json:"created_at"`
+	ID            string    `json:"id"`
+	Email         string    `json:"email"`
+	Role          Role      `json:"role"`
+	EmailVerified bool      `json:"email_verified"`
+	CreatedAt     time.Time `json:"created_at"`
 }
 
 // ToResponse converts a User domain struct to a UserResponse.
@@ -56,12 +58,11 @@ type UserResponse struct {
 // Usage: c.JSON(200, user.ToResponse())
 func (u *User) ToResponse() *UserResponse {
 	return &UserResponse{
-		ID:    u.ID,
-		Email: u.Email,
-		// Role:  string(u.Role),
-		Role: u.Role,
-
-		CreatedAt: u.CreatedAt,
+		ID:            u.ID,
+		Email:         u.Email,
+		Role:          u.Role,
+		EmailVerified: u.EmailVerified,
+		CreatedAt:     u.CreatedAt,
 	}
 }
 

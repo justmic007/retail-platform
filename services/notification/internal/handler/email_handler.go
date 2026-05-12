@@ -33,9 +33,34 @@ func NewEmailHandler(apiKey, fromEmail, fromName string, log *logger.Logger) *Em
 // SendOrderConfirmation sends an order confirmation email to the customer.
 func (h *EmailHandler) SendOrderConfirmation(ctx context.Context, event events.OrderEvent) {
 	subject := "Your order has been confirmed"
+
+	itemRows := ""
+	for _, item := range event.Items {
+		itemRows += fmt.Sprintf(
+			"<tr><td style='padding:4px 12px;border:1px solid #e5e7eb'>%s</td><td style='padding:4px 12px;text-align:center;border:1px solid #e5e7eb'>%d</td><td style='padding:4px 12px;text-align:right;border:1px solid #e5e7eb'>R%.2f</td><td style='padding:4px 12px;text-align:right;border:1px solid #e5e7eb'>R%.2f</td></tr>",
+			item.ProductName, item.Quantity, item.UnitPrice, item.TotalPrice,
+		)
+	}
+
+	var itemsTable string
+	if itemRows != "" {
+		itemsTable = fmt.Sprintf(`
+			<table style="border-collapse:collapse;margin:16px 0;font-size:14px">
+				<thead>
+					<tr style="background:#f3f4f6">
+						<th style="padding:6px 12px;text-align:left;border:1px solid #e5e7eb">Item</th>
+						<th style="padding:6px 12px;text-align:center;border:1px solid #e5e7eb">Qty</th>
+						<th style="padding:6px 12px;text-align:right;border:1px solid #e5e7eb">Unit Price</th>
+						<th style="padding:6px 12px;text-align:right;border:1px solid #e5e7eb">Total</th>
+					</tr>
+				</thead>
+				<tbody>%s</tbody>
+			</table>`, itemRows)
+	}
+
 	body := fmt.Sprintf(
-		"Hi,<br><br>Your order <strong>%s</strong> has been confirmed.<br>Total: <strong>R%.2f</strong><br><br>Thank you for shopping with us.",
-		event.OrderID, event.Total,
+		"Hi,<br><br>Your order <strong>#%s</strong> has been confirmed.%s<br><strong>Total: R%.2f</strong><br><br>Thank you for shopping with us.",
+		event.OrderID[:8], itemsTable, event.Total,
 	)
 	h.send(ctx, event.UserEmail, subject, body)
 	h.log.Info().

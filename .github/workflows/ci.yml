@@ -23,6 +23,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+          cache: true
+
+      - name: Install golangci-lint
         run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.11.4
 
       - name: Run golangci-lint
@@ -69,6 +72,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+          cache: true
+
+      - name: Create test databases
         run: |
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE order_db;"
           PGPASSWORD=retailsecret psql -h localhost -U retail -d auth_db -c "CREATE DATABASE inventory_db;"
@@ -115,6 +121,9 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: "1.25"
+          cache: true
+
+      - name: Build all services
         run: |
           cd services/auth && go build ./cmd/server/...
           cd ../../services/order && go build ./cmd/server/...

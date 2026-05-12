@@ -185,6 +185,41 @@ func (h *AuthHandler) Me(c *gin.Context) {
 	})
 }
 
+// VerifyEmail handles GET /auth/verify?token=xxx
+func (h *AuthHandler) VerifyEmail(c *gin.Context) {
+	token := c.Query("token")
+	if token == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "token is required", "code": "BAD_REQUEST"})
+		return
+	}
+
+	if err := h.service.VerifyEmail(c.Request.Context(), token); err != nil {
+		h.handleError(c, err)
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "email verified successfully — you can now log in"})
+}
+
+// ResendVerification handles POST /auth/resend-verification
+func (h *AuthHandler) ResendVerification(c *gin.Context) {
+	var req struct {
+		Email string `json:"email" validate:"required,email"`
+	}
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request body", "code": "BAD_REQUEST"})
+		return
+	}
+	if err := h.validator.Validate(req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error(), "code": "VALIDATION_ERROR"})
+		return
+	}
+
+	// Always return 200 — don't reveal whether the email exists
+	_ = h.service.ResendVerification(c.Request.Context(), req.Email)
+	c.JSON(http.StatusOK, gin.H{"message": "if that email is registered and unverified, a new verification email has been sent"})
+}
+
 // Health handles GET /health — liveness probe.
 // Returns 200 if the process is running.
 // Kubernetes uses this to know if the pod should be restarted.

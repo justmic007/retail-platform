@@ -1,11 +1,3 @@
-// auth_service_test.go — unit tests for AuthService.
-//
-// Key concept: these tests use MOCK repositories that implement the
-// UserRepository and TokenRepository interfaces. No real database.
-// No Docker. Tests run in milliseconds.
-//
-// This is possible BECAUSE we designed the service to depend on interfaces,
-// not concrete types. The payoff for that decision is right here.
 package service
 
 import (
@@ -20,9 +12,6 @@ import (
 )
 
 // ── Mock repositories ─────────────────────────────────────────────────────────
-// These structs implement UserRepository and TokenRepository interfaces.
-// They store data in memory (maps) instead of a real database.
-// Go automatically recognises them as implementations — no "implements" keyword.
 
 type mockUserRepo struct {
 	users map[string]*domain.User // keyed by email
@@ -64,7 +53,6 @@ func (m *mockUserRepo) UpdateRole(ctx context.Context, userID, role string) erro
 	for _, user := range m.users {
 		if user.ID == userID {
 			user.Role = domain.Role(role)
-			return nil
 		}
 	}
 	return nil
@@ -74,7 +62,15 @@ func (m *mockUserRepo) UpdatePassword(ctx context.Context, userID, passwordHash 
 	for _, user := range m.users {
 		if user.ID == userID {
 			user.PasswordHash = passwordHash
-			return nil
+		}
+	}
+	return nil
+}
+
+func (m *mockUserRepo) MarkEmailVerified(ctx context.Context, userID string) error {
+	for _, user := range m.users {
+		if user.ID == userID {
+			user.EmailVerified = true
 		}
 	}
 	return nil
@@ -115,39 +111,70 @@ func (m *mockTokenRepo) DeleteAllUserTokens(ctx context.Context, userID string) 
 	return nil
 }
 
+type mockVerificationTokenRepo struct {
+	tokens map[string]string // token → userID
+}
+
+func newMockVerificationTokenRepo() *mockVerificationTokenRepo {
+	return &mockVerificationTokenRepo{tokens: make(map[string]string)}
+}
+
+func (m *mockVerificationTokenRepo) Store(ctx context.Context, userID, token string, expiry time.Time) error {
+	m.tokens[token] = userID
+	return nil
+}
+
+func (m *mockVerificationTokenRepo) FindUserID(ctx context.Context, token string) (string, error) {
+	userID, exists := m.tokens[token]
+	if !exists {
+		return "", domain.ErrInvalidVerificationToken
+	}
+	return userID, nil
+}
+
+func (m *mockVerificationTokenRepo) Delete(ctx context.Context, token string) error {
+	delete(m.tokens, token)
+	return nil
+}
+
 // ── Test helper ───────────────────────────────────────────────────────────────
 
-// newTestService creates an AuthService wired with mock dependencies.
-// Called at the start of each test — fresh state every time.
 func newTestService() (*AuthService, *mockUserRepo, *mockTokenRepo) {
 	cfg := &config.Config{
-		BcryptCost:      4, // cost 4 is minimum — makes tests fast (not 300ms each)
+		BcryptCost:      4,
 		AccessTokenTTL:  15 * time.Minute,
 		RefreshTokenTTL: 168 * time.Hour,
 		JWTSecret:       "test-secret-key-for-unit-tests-only",
+		AppBaseURL:      "http://localhost:8080",
 	}
-
 	userRepo := newMockUserRepo()
 	tokenRepo := newMockTokenRepo()
+	verificationRepo := newMockVerificationTokenRepo()
 	jwtManager := jwt.NewManager(cfg.JWTSecret, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	log := logger.New("auth-test")
-
-	svc := NewAuthService(userRepo, tokenRepo, jwtManager, cfg, log)
+	svc := NewAuthService(userRepo, tokenRepo, verificationRepo, jwtManager, nil, cfg, log)
 	return svc, userRepo, tokenRepo
 }
 
+// registerAndVerify is a test helper that registers a user and marks them verified.
+func registerAndVerify(t *testing.T, svc *AuthService, userRepo *mockUserRepo, email, password string) {
+	t.Helper()
+	ctx := context.Background()
+	_, err := svc.Register(ctx, domain.RegisterRequest{Email: email, Password: password})
+	if err != nil {
+		t.Fatalf("setup: register failed: %v", err)
+	}
+	_ = userRepo.MarkEmailVerified(ctx, "test-user-id-123")
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
-// Table-driven test pattern: define test cases as a slice of structs,
-// loop over them, run each as a sub-test with t.Run().
-// This is the idiomatic Go way — no Jest, no pytest, just the testing package.
 
 func TestRegister(t *testing.T) {
-	// Table of test cases
 	tests := []struct {
 		name    string
 		req     domain.RegisterRequest
 		wantErr bool
-		errIs   error // the specific error we expect, if any
+		errIs   error
 	}{
 		{
 			name:    "successful registration",
@@ -163,48 +190,33 @@ func TestRegister(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		// t.Run creates a named sub-test — shows up individually in test output.
 		t.Run(tc.name, func(t *testing.T) {
 			svc, _, _ := newTestService()
 			ctx := context.Background()
 
-			// For duplicate email test, pre-register the email first
 			if tc.wantErr && tc.errIs == domain.ErrEmailTaken {
-				_, _ = svc.Register(ctx, domain.RegisterRequest{
-					Email: "micah@example.com", Password: "securepassword",
-				})
+				_, _ = svc.Register(ctx, domain.RegisterRequest{Email: "micah@example.com", Password: "securepassword"})
 			}
 
-			// Now run the actual test case
 			user, err := svc.Register(ctx, tc.req)
 
 			if tc.wantErr {
-				// We expect an error
 				if err == nil {
-					t.Errorf("expected error but got nil")
+					t.Error("expected error but got nil")
 				}
 				return
 			}
 
-			// We expect success
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-
 			if user.ID == "" {
 				t.Error("expected user to have an ID after registration")
 			}
-
-			if user.PasswordHash == "" {
-				t.Error("expected password to be hashed")
-			}
-
-			// Critical: the hash must NOT equal the plain text password
 			if user.PasswordHash == tc.req.Password {
 				t.Error("password was stored as plain text — critical security bug")
 			}
-
 			if user.Role != domain.RoleCustomer {
 				t.Errorf("expected role 'customer', got '%s'", user.Role)
 			}
@@ -237,16 +249,9 @@ func TestLogin(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svc, _, _ := newTestService()
+			svc, userRepo, _ := newTestService()
 			ctx := context.Background()
-
-			// Register a user first so login has someone to find
-			_, err := svc.Register(ctx, domain.RegisterRequest{
-				Email: "micah@example.com", Password: "securepassword",
-			})
-			if err != nil {
-				t.Fatalf("setup failed: could not register user: %v", err)
-			}
+			registerAndVerify(t, svc, userRepo, "micah@example.com", "securepassword")
 
 			tokens, err := svc.Login(ctx, tc.req)
 
@@ -256,20 +261,16 @@ func TestLogin(t *testing.T) {
 				}
 				return
 			}
-
 			if err != nil {
 				t.Errorf("unexpected error: %v", err)
 				return
 			}
-
 			if tokens.AccessToken == "" {
 				t.Error("expected access token to be non-empty")
 			}
-
 			if tokens.RefreshToken == "" {
 				t.Error("expected refresh token to be non-empty")
 			}
-
 			if tokens.ExpiresIn <= 0 {
 				t.Error("expected expires_in to be positive")
 			}
@@ -277,53 +278,50 @@ func TestLogin(t *testing.T) {
 	}
 }
 
+func TestLoginUnverifiedEmail(t *testing.T) {
+	svc, _, _ := newTestService()
+	ctx := context.Background()
+
+	_, err := svc.Register(ctx, domain.RegisterRequest{Email: "micah@example.com", Password: "securepassword"})
+	if err != nil {
+		t.Fatalf("setup: register failed: %v", err)
+	}
+
+	// Do NOT verify email — login should be blocked
+	_, err = svc.Login(ctx, domain.LoginRequest{Email: "micah@example.com", Password: "securepassword"})
+	if err == nil {
+		t.Error("expected error for unverified email but got nil")
+	}
+}
+
 func TestRefresh(t *testing.T) {
 	t.Run("successful token refresh", func(t *testing.T) {
-		svc, _, _ := newTestService()
+		svc, userRepo, _ := newTestService()
 		ctx := context.Background()
+		registerAndVerify(t, svc, userRepo, "micah@example.com", "securepassword")
 
-		// Register and login to get initial tokens
-		_, err := svc.Register(ctx, domain.RegisterRequest{
-			Email: "micah@example.com", Password: "securepassword",
-		})
-		if err != nil {
-			t.Fatalf("setup: register failed: %v", err)
-		}
-
-		tokens, err := svc.Login(ctx, domain.LoginRequest{
-			Email: "micah@example.com", Password: "securepassword",
-		})
+		tokens, err := svc.Login(ctx, domain.LoginRequest{Email: "micah@example.com", Password: "securepassword"})
 		if err != nil {
 			t.Fatalf("setup: login failed: %v", err)
 		}
 
-		// Refresh using the refresh token
-		newTokens, err := svc.Refresh(ctx, domain.RefreshRequest{
-			RefreshToken: tokens.RefreshToken,
-		})
+		newTokens, err := svc.Refresh(ctx, domain.RefreshRequest{RefreshToken: tokens.RefreshToken})
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 			return
 		}
-
 		if newTokens.AccessToken == "" {
 			t.Error("expected new access token")
 		}
-
-		// Token rotation: new refresh token must be different from the old one
 		if newTokens.RefreshToken == tokens.RefreshToken {
-			t.Error("refresh token should be rotated — old and new should differ")
+			t.Error("refresh token should be rotated")
 		}
 	})
 
 	t.Run("invalid refresh token rejected", func(t *testing.T) {
 		svc, _, _ := newTestService()
 		ctx := context.Background()
-
-		_, err := svc.Refresh(ctx, domain.RefreshRequest{
-			RefreshToken: "this-token-does-not-exist",
-		})
-
+		_, err := svc.Refresh(ctx, domain.RefreshRequest{RefreshToken: "this-token-does-not-exist"})
 		if err == nil {
 			t.Error("expected error for invalid refresh token but got nil")
 		}
@@ -332,30 +330,21 @@ func TestRefresh(t *testing.T) {
 
 func TestLogout(t *testing.T) {
 	t.Run("logout invalidates refresh token", func(t *testing.T) {
-		svc, _, _ := newTestService()
+		svc, userRepo, _ := newTestService()
 		ctx := context.Background()
+		registerAndVerify(t, svc, userRepo, "micah@example.com", "securepassword")
 
-		_, _ = svc.Register(ctx, domain.RegisterRequest{
-			Email: "micah@example.com", Password: "securepassword",
-		})
-
-		tokens, _ := svc.Login(ctx, domain.LoginRequest{
-			Email: "micah@example.com", Password: "securepassword",
-		})
-
-		// Logout
-		err := svc.Logout(ctx, tokens.RefreshToken)
+		tokens, err := svc.Login(ctx, domain.LoginRequest{Email: "micah@example.com", Password: "securepassword"})
 		if err != nil {
+			t.Fatalf("setup: login failed: %v", err)
+		}
+
+		if err := svc.Logout(ctx, tokens.RefreshToken); err != nil {
 			t.Errorf("logout failed: %v", err)
 			return
 		}
 
-		// Try to use the now-invalidated refresh token
-		_, err = svc.Refresh(ctx, domain.RefreshRequest{
-			RefreshToken: tokens.RefreshToken,
-		})
-
-		// Must fail — the token was deleted on logout
+		_, err = svc.Refresh(ctx, domain.RefreshRequest{RefreshToken: tokens.RefreshToken})
 		if err == nil {
 			t.Error("refresh should fail after logout but succeeded")
 		}

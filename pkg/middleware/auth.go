@@ -20,9 +20,10 @@ import (
 //	role   := c.GetString(middleware.RoleKey)
 
 const (
-	UserIDKey    = "user_id"
-	UserEmailKey = "user_email"
-	RoleKey      = "role"
+	UserIDKey        = "user_id"
+	UserEmailKey     = "user_email"
+	RoleKey          = "role"
+	EmailVerifiedKey = "email_verified"
 )
 
 // AuthMiddleware returns a Gin middleware function that validates JWTs.
@@ -95,11 +96,28 @@ func AuthMiddleware(jwtManager *jwt.Manager) gin.HandlerFunc {
 		c.Set(UserIDKey, claims.UserID)
 		c.Set(UserEmailKey, claims.UserEmail)
 		c.Set(RoleKey, claims.Role)
+		c.Set(EmailVerifiedKey, claims.EmailVerified)
 
 		// ── Step 5: Continue to the handler ──────────────────────────────
 		// c.Next() passes control to the next middleware or handler.
 		// c.Abort() (used above in error cases) stops the chain here —
 		// the handler never runs if the token is invalid.
+		c.Next()
+	}
+}
+
+// RequireEmailVerified blocks requests from users who have not verified their email.
+// Use AFTER AuthMiddleware.
+func RequireEmailVerified() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		verified, _ := c.Get(EmailVerifiedKey)
+		if v, ok := verified.(bool); !ok || !v {
+			c.AbortWithStatusJSON(http.StatusForbidden, gin.H{
+				"error": "please verify your email address before placing orders",
+				"code":  "EMAIL_NOT_VERIFIED",
+			})
+			return
+		}
 		c.Next()
 	}
 }

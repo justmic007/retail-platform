@@ -15,9 +15,10 @@ import (
 // jwt.RegisteredClaims gives us the ExpiresAt, IssuedAt, Subject
 
 type Claims struct {
-	UserID    string `json:"user_id"`
-	UserEmail string `json:"user_email"`
-	Role      string `json:"role"`
+	UserID        string `json:"user_id"`
+	UserEmail     string `json:"user_email"`
+	Role          string `json:"role"`
+	EmailVerified bool   `json:"email_verified"`
 	jwt.RegisteredClaims
 }
 
@@ -41,13 +42,14 @@ func NewManager(secret string, accessTTL, refreshTTL time.Duration) *Manager {
 }
 
 // GenerateAccessToken creates a signed JWT access token for the given user.
-func (m *Manager) GenerateAccessToken(userID, email, role string) (string, error) {
+func (m *Manager) GenerateAccessToken(userID, email, role string, emailVerified bool) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
-		UserID:    userID,
-		UserEmail: email,
-		Role:      role,
+		UserID:        userID,
+		UserEmail:     email,
+		Role:          role,
+		EmailVerified: emailVerified,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID,
 			IssuedAt:  jwt.NewNumericDate(now),

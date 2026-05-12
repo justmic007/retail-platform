@@ -24,16 +24,23 @@ const (
 	EventStockLow       EventType = "STOCK_LOW"
 )
 
+// OrderItem carries a line item snapshot in an order event.
+type OrderItem struct {
+	ProductName string  `json:"product_name"`
+	Quantity    int     `json:"quantity"`
+	UnitPrice   float64 `json:"unit_price"`
+	TotalPrice  float64 `json:"total_price"`
+}
+
 // OrderEvent carries all the data a notification handler needs.
-// Notice: no database IDs from internal tables — only what's needed
-// to send a notification. Services share events, not database schemas.
 type OrderEvent struct {
-	Type       EventType `json:"type"`
-	OrderID    string    `json:"order_id"`
-	UserID     string    `json:"user_id"`
-	UserEmail  string    `json:"user_email"`
-	Total      float64   `json:"total"`
-	OccurredAt time.Time `json:"occurred_at"`
+	Type       EventType   `json:"type"`
+	OrderID    string      `json:"order_id"`
+	UserID     string      `json:"user_id"`
+	UserEmail  string      `json:"user_email"`
+	Total      float64     `json:"total"`
+	Items      []OrderItem `json:"items,omitempty"`
+	OccurredAt time.Time   `json:"occurred_at"`
 }
 
 // StockEvent is published when stock drops below a threshold.

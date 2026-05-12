@@ -6,11 +6,12 @@
 -- go run -e 'import "golang.org/x/crypto/bcrypt"; fmt.Println(string(bcrypt.GenerateFromPassword([]byte("yourpassword"), 12)))'
 -- Or use: https://bcrypt-generator.com (cost 12)
 
-INSERT INTO users (email, password_hash, role)
+INSERT INTO users (email, password_hash, role, email_verified)
 VALUES (
     'admin@retailplatform.com',
     '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LewdBPj/oK7rkJQyS',
-    'admin'
+    'admin',
+    TRUE
 )
 ON CONFLICT (email) DO NOTHING;
 -- ON CONFLICT means: if admin already exists, skip silently (safe to re-run)
