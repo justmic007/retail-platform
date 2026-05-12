@@ -1,6 +1,6 @@
 module retail-platform/order
 
-go 1.23.0
+go 1.24.0
 
 require (
 	github.com/caarlos0/env/v10 v10.0.0
