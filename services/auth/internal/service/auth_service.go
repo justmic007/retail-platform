@@ -20,13 +20,13 @@ import (
 
 // AuthService contains all authentication business logic.
 type AuthService struct {
-	userRepo          repository.UserRepository
-	tokenRepo         repository.TokenRepository
-	verificationRepo  repository.VerificationTokenRepository
-	jwt               *jwt.Manager
-	mailer            *mailer.Mailer
-	cfg               *config.Config
-	log               *logger.Logger
+	userRepo         repository.UserRepository
+	tokenRepo        repository.TokenRepository
+	verificationRepo repository.VerificationTokenRepository
+	jwt              *jwt.Manager
+	mailer           *mailer.Mailer
+	cfg              *config.Config
+	log              *logger.Logger
 }
 
 // NewAuthService creates a new AuthService with all dependencies injected.

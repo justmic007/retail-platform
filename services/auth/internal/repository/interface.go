@@ -59,6 +59,7 @@ type VerificationTokenRepository interface {
 	// Delete removes a verification token after it has been used.
 	Delete(ctx context.Context, token string) error
 }
+
 // Refresh tokens are stored in the database so they can be invalidated
 // server-side (unlike JWTs which are stateless and cannot be revoked).
 type TokenRepository interface {
