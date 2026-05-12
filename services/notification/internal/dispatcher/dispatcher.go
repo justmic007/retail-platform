@@ -13,7 +13,7 @@ import (
 
 // Dispatcher reads events from the event bus and routes them to handlers.
 type Dispatcher struct {
-	bus      *events.Bus
+	bus      events.Subscriber
 	email    emailSender
 	internal *handler.InternalHandler
 	log      *logger.Logger
@@ -28,7 +28,7 @@ type emailSender interface {
 
 // NewDispatcher creates a new Dispatcher.
 func NewDispatcher(
-	bus *events.Bus,
+	bus events.Subscriber,
 	email emailSender,
 	internal *handler.InternalHandler,
 	log *logger.Logger,
@@ -47,16 +47,28 @@ func NewDispatcher(
 func (d *Dispatcher) Run(ctx context.Context) {
 	d.log.Info().Msg("dispatcher started")
 
+	orders, err := d.bus.SubscribeOrders(ctx)
+	if err != nil {
+		d.log.Fatal().Err(err).Msg("failed to subscribe to orders channel")
+		return
+	}
+
+	stock, err := d.bus.SubscribeStock(ctx)
+	if err != nil {
+		d.log.Fatal().Err(err).Msg("failed to subscribe to stock channel")
+		return
+	}
+
 	for {
 		select {
-		case event, ok := <-d.bus.Orders:
+		case event, ok := <-orders:
 			if !ok {
 				d.log.Info().Msg("orders channel closed — dispatcher stopping")
 				return
 			}
 			d.safeHandle(func() { d.handleOrderEvent(event) })
 
-		case event, ok := <-d.bus.Stock:
+		case event, ok := <-stock:
 			if !ok {
 				d.log.Info().Msg("stock channel closed — dispatcher stopping")
 				return

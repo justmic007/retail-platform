@@ -7,12 +7,15 @@ import (
 	"github.com/caarlos0/env/v10"
 )
 
-// This Config holds all configuration for the Notification Service.
-// No database, no Redis.
+// Config holds all configuration for the Notification Service.
+// No database — stateless by design.
 type Config struct {
 	Port      int    `env:"NOTIFICATION_PORT" envDefault:"8083"`
 	AppEnv    string `env:"APP_ENV" envDefault:"development"`
 	LogFormat string `env:"LOG_FORMAT" envDefault:"pretty"`
+
+	// Redis — for event bus (Redis Pub/Sub)
+	RedisURL string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
 }
 
 // Load reads all environment variables and returns a populated Config.

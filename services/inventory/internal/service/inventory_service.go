@@ -22,7 +22,7 @@ type InventoryService struct {
 	productRepo repository.ProductRepository
 	stockRepo   repository.StockRepository
 	cache       cache.StockCache
-	eventBus    *events.Bus
+	eventBus    events.Publisher
 	cfg         *config.Config
 	log         *logger.Logger
 }
@@ -32,7 +32,7 @@ func NewInventoryService(
 	productRepo repository.ProductRepository,
 	stockRepo repository.StockRepository,
 	stockCache cache.StockCache,
-	eventBus *events.Bus,
+	eventBus events.Publisher,
 	cfg *config.Config,
 	log *logger.Logger,
 ) *InventoryService {
@@ -240,9 +240,8 @@ func (s *InventoryService) getStockWithCache(ctx context.Context, productID stri
 	return stock, nil
 }
 
-// checkAndPublishLowStock checks if stock is below threshold
-// and publishes a StockLow event if so.
-// Runs non-blocking — does not affect the reservation response.
+// checkAndPublishLowStock checks if stock is below threshold and publishes a StockLow event.
+// Non-blocking — does not affect the reservation response.
 func (s *InventoryService) checkAndPublishLowStock(ctx context.Context, productID string) {
 	stock, err := s.stockRepo.GetByProductID(ctx, productID)
 	if err != nil {
@@ -250,27 +249,18 @@ func (s *InventoryService) checkAndPublishLowStock(ctx context.Context, productI
 	}
 
 	if stock.Available() < s.cfg.LowStockThreshold {
-		// Get product name for the event
 		product, err := s.productRepo.FindByID(ctx, productID)
 		if err != nil {
 			return
 		}
 
-		// Publish to event bus — non-blocking send
-		// If channel is full, skip rather than blocking the reservation
-		select {
-		case s.eventBus.Stock <- events.StockEvent{
+		if err := s.eventBus.PublishStock(ctx, events.StockEvent{
 			Type:        events.EventStockLow,
 			ProductID:   productID,
 			ProductName: product.Name,
 			StockLevel:  stock.Available(),
-		}:
-			s.log.Info().
-				Str("product_id", productID).
-				Int("available", stock.Available()).
-				Msg("low stock event published")
-		default:
-			// Channel full — skip event, don't block
+		}); err != nil {
+			s.log.Warn().Err(err).Str("product_id", productID).Msg("failed to publish low stock event")
 		}
 	}
 }

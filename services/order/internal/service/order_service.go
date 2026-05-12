@@ -20,7 +20,7 @@ type OrderService struct {
 	repo            repository.OrderRepository
 	inventoryClient client.InventoryClientInterface
 	pool            *worker.WorkerPool
-	eventBus        *events.Bus
+	eventBus        events.Publisher
 	log             *logger.Logger
 }
 
@@ -29,7 +29,7 @@ func NewOrderService(
 	repo repository.OrderRepository,
 	inventoryClient client.InventoryClientInterface,
 	pool *worker.WorkerPool,
-	eventBus *events.Bus,
+	eventBus events.Publisher,
 	log *logger.Logger,
 ) *OrderService {
 	return &OrderService{
@@ -145,16 +145,12 @@ func (s *OrderService) CancelOrder(ctx context.Context, orderID, userID string) 
 		return fmt.Errorf("cancel order: %w", err)
 	}
 
-	// Publish OrderCancelled event
-	select {
-	case s.eventBus.Orders <- events.OrderEvent{
+	// Publish OrderCancelled event — best-effort, ignore error
+	_ = s.eventBus.PublishOrder(ctx, events.OrderEvent{
 		Type:    events.EventOrderCancelled,
 		OrderID: orderID,
 		UserID:  userID,
-	}:
-	default:
-		// Channel full — skip, notifications are best-effort
-	}
+	})
 
 	s.log.Info().
 		Str("order_id", orderID).

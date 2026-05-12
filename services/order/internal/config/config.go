@@ -31,6 +31,9 @@ type Config struct {
 
 	// Worker pool — how many goroutines process orders concurrently
 	WorkerPoolSize int `env:"WORKER_POOL_SIZE" envDefault:"10"`
+
+	// Redis — for event bus (Redis Pub/Sub)
+	RedisURL string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
 }
 
 // Load reads all environment variables and returns a populated Config.

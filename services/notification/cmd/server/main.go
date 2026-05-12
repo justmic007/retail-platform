@@ -1,5 +1,5 @@
 // Package main is the entry point for the Notification Service.
-// Composition root — creates the event bus, wires handlers and dispatcher,
+// Composition root — creates the Redis event bus, wires handlers and dispatcher,
 // starts the dispatcher goroutine, then starts the HTTP server.
 package main
 
@@ -22,9 +22,13 @@ func main() {
 	log := logger.New("notification-service")
 	log.Info().Str("env", cfg.AppEnv).Msg("starting notification service")
 
-	// Step 3: Event bus — created here, passed to Order and Inventory services
-	// In this single-process setup, all services share the same bus instance
-	eventBus := events.NewBus()
+	// Step 3: Event bus — Redis Pub/Sub for cross-service event delivery
+	// Notification Service subscribes to events published by Order and Inventory services
+	eventBus, err := events.NewRedisBus(cfg.RedisURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to redis event bus")
+	}
+	log.Info().Msg("redis event bus connected")
 
 	// Step 4: Handlers
 	emailHandler := handler.NewEmailHandler(log)
