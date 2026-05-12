@@ -11,7 +11,7 @@
 # This is how Stripe, Cloudflare, and Google deploy Go services.
 
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM golang:1.22-alpine AS builder
+FROM golang:1.23-alpine AS builder
 
 # Install git (needed by some Go modules) and CA certificates (for HTTPS calls)
 RUN apk add --no-cache git ca-certificates tzdata
