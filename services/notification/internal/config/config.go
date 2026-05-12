@@ -21,9 +21,9 @@ type Config struct {
 	WarehouseEmail string `env:"WAREHOUSE_EMAIL" envDefault:"workfromhomenoni@gmail.com"`
 
 	// Brevo — transactional email provider
-	BrevoAPIKey    string `env:"BREVO_SEND_EMAIL_API_KEY"`
-	EmailFrom      string `env:"EMAIL_FROM" envDefault:"noreply@retailplatform.com"`
-	EmailFromName  string `env:"EMAIL_FROM_NAME" envDefault:"Retail Platform"`
+	BrevoAPIKey   string `env:"BREVO_SEND_EMAIL_API_KEY"`
+	EmailFrom     string `env:"EMAIL_FROM" envDefault:"noreply@retailplatform.com"`
+	EmailFromName string `env:"EMAIL_FROM_NAME" envDefault:"Retail Platform"`
 }
 
 // Load reads all environment variables and returns a populated Config.
