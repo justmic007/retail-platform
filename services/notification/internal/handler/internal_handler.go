@@ -33,14 +33,14 @@ func NewInternalHandler(apiKey, fromEmail, fromName, warehouseEmail string, log 
 }
 
 // SendLowStockAlert sends a low stock alert email to warehouse staff.
-func (h *InternalHandler) SendLowStockAlert(event events.StockEvent) {
+func (h *InternalHandler) SendLowStockAlert(ctx context.Context, event events.StockEvent) {
 	subject := fmt.Sprintf("Low stock alert: %s", event.ProductName)
 	body := fmt.Sprintf(
 		"<strong>Low Stock Alert</strong><br><br>Product: <strong>%s</strong><br>Product ID: %s<br>Current stock: <strong>%d units</strong><br><br>Please restock as soon as possible.",
 		event.ProductName, event.ProductID, event.StockLevel,
 	)
 
-	ctx := context.WithValue(context.Background(), brevo.ContextAPIKey, brevo.APIKey{Key: h.apiKey})
+	ctx = context.WithValue(ctx, brevo.ContextAPIKey, brevo.APIKey{Key: h.apiKey})
 	_, _, err := h.client.TransactionalEmailsApi.SendTransacEmail(
 		ctx,
 		brevo.SendSmtpEmail{

@@ -118,14 +118,14 @@ func TestDispatcher_GracefulShutdown(t *testing.T) {
 // panicEmailHandler is a test double that panics on every call.
 type panicEmailHandler struct{}
 
-func (p *panicEmailHandler) SendOrderConfirmation(event events.OrderEvent) {
+func (p *panicEmailHandler) SendOrderConfirmation(ctx context.Context, event events.OrderEvent) {
 	panic("simulated handler panic")
 }
 
-func (p *panicEmailHandler) SendOrderFailed(event events.OrderEvent) {
+func (p *panicEmailHandler) SendOrderFailed(ctx context.Context, event events.OrderEvent) {
 	panic("simulated handler panic")
 }
 
-func (p *panicEmailHandler) SendOrderCancelled(event events.OrderEvent) {
+func (p *panicEmailHandler) SendOrderCancelled(ctx context.Context, event events.OrderEvent) {
 	panic("simulated handler panic")
 }

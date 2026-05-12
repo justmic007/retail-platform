@@ -21,9 +21,9 @@ type Dispatcher struct {
 
 // emailSender is satisfied by EmailHandler and any test double.
 type emailSender interface {
-	SendOrderConfirmation(event events.OrderEvent)
-	SendOrderFailed(event events.OrderEvent)
-	SendOrderCancelled(event events.OrderEvent)
+	SendOrderConfirmation(ctx context.Context, event events.OrderEvent)
+	SendOrderFailed(ctx context.Context, event events.OrderEvent)
+	SendOrderCancelled(ctx context.Context, event events.OrderEvent)
 }
 
 // NewDispatcher creates a new Dispatcher.
@@ -66,14 +66,14 @@ func (d *Dispatcher) Run(ctx context.Context) {
 				d.log.Info().Msg("orders channel closed — dispatcher stopping")
 				return
 			}
-			d.safeHandle(func() { d.handleOrderEvent(event) })
+			d.safeHandle(func() { d.handleOrderEvent(ctx, event) })
 
 		case event, ok := <-stock:
 			if !ok {
 				d.log.Info().Msg("stock channel closed — dispatcher stopping")
 				return
 			}
-			d.safeHandle(func() { d.handleStockEvent(event) })
+			d.safeHandle(func() { d.handleStockEvent(ctx, event) })
 
 		case <-ctx.Done():
 			d.log.Info().Msg("context cancelled — dispatcher stopping")
@@ -83,7 +83,7 @@ func (d *Dispatcher) Run(ctx context.Context) {
 }
 
 // handleOrderEvent routes an order event to the correct email handler method.
-func (d *Dispatcher) handleOrderEvent(event events.OrderEvent) {
+func (d *Dispatcher) handleOrderEvent(ctx context.Context, event events.OrderEvent) {
 	d.log.Info().
 		Str("type", string(event.Type)).
 		Str("order_id", event.OrderID).
@@ -91,11 +91,11 @@ func (d *Dispatcher) handleOrderEvent(event events.OrderEvent) {
 
 	switch event.Type {
 	case events.EventOrderConfirmed:
-		d.email.SendOrderConfirmation(event)
+		d.email.SendOrderConfirmation(ctx, event)
 	case events.EventOrderFailed:
-		d.email.SendOrderFailed(event)
+		d.email.SendOrderFailed(ctx, event)
 	case events.EventOrderCancelled:
-		d.email.SendOrderCancelled(event)
+		d.email.SendOrderCancelled(ctx, event)
 	default:
 		d.log.Warn().
 			Str("type", string(event.Type)).
@@ -104,7 +104,7 @@ func (d *Dispatcher) handleOrderEvent(event events.OrderEvent) {
 }
 
 // handleStockEvent routes a stock event to the correct internal handler method.
-func (d *Dispatcher) handleStockEvent(event events.StockEvent) {
+func (d *Dispatcher) handleStockEvent(ctx context.Context, event events.StockEvent) {
 	d.log.Info().
 		Str("type", string(event.Type)).
 		Str("product_id", event.ProductID).
@@ -112,7 +112,7 @@ func (d *Dispatcher) handleStockEvent(event events.StockEvent) {
 
 	switch event.Type {
 	case events.EventStockLow:
-		d.internal.SendLowStockAlert(event)
+		d.internal.SendLowStockAlert(ctx, event)
 	default:
 		d.log.Warn().
 			Str("type", string(event.Type)).

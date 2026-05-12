@@ -31,13 +31,13 @@ func NewEmailHandler(apiKey, fromEmail, fromName string, log *logger.Logger) *Em
 }
 
 // SendOrderConfirmation sends an order confirmation email to the customer.
-func (h *EmailHandler) SendOrderConfirmation(event events.OrderEvent) {
+func (h *EmailHandler) SendOrderConfirmation(ctx context.Context, event events.OrderEvent) {
 	subject := "Your order has been confirmed"
 	body := fmt.Sprintf(
 		"Hi,<br><br>Your order <strong>%s</strong> has been confirmed.<br>Total: <strong>R%.2f</strong><br><br>Thank you for shopping with us.",
 		event.OrderID, event.Total,
 	)
-	h.send(event.UserEmail, subject, body)
+	h.send(ctx, event.UserEmail, subject, body)
 	h.log.Info().
 		Str("type", "ORDER_CONFIRMATION").
 		Str("order_id", event.OrderID).
@@ -47,13 +47,13 @@ func (h *EmailHandler) SendOrderConfirmation(event events.OrderEvent) {
 }
 
 // SendOrderFailed sends an order failure notification to the customer.
-func (h *EmailHandler) SendOrderFailed(event events.OrderEvent) {
+func (h *EmailHandler) SendOrderFailed(ctx context.Context, event events.OrderEvent) {
 	subject := "Your order could not be processed"
 	body := fmt.Sprintf(
 		"Hi,<br><br>Unfortunately your order <strong>%s</strong> could not be processed.<br>No payment has been taken. Please try again.",
 		event.OrderID,
 	)
-	h.send(event.UserEmail, subject, body)
+	h.send(ctx, event.UserEmail, subject, body)
 	h.log.Info().
 		Str("type", "ORDER_FAILED").
 		Str("order_id", event.OrderID).
@@ -62,13 +62,13 @@ func (h *EmailHandler) SendOrderFailed(event events.OrderEvent) {
 }
 
 // SendOrderCancelled sends an order cancellation confirmation to the customer.
-func (h *EmailHandler) SendOrderCancelled(event events.OrderEvent) {
+func (h *EmailHandler) SendOrderCancelled(ctx context.Context, event events.OrderEvent) {
 	subject := "Your order has been cancelled"
 	body := fmt.Sprintf(
 		"Hi,<br><br>Your order <strong>%s</strong> has been cancelled as requested.",
 		event.OrderID,
 	)
-	h.send(event.UserEmail, subject, body)
+	h.send(ctx, event.UserEmail, subject, body)
 	h.log.Info().
 		Str("type", "ORDER_CANCELLED").
 		Str("order_id", event.OrderID).
@@ -77,13 +77,13 @@ func (h *EmailHandler) SendOrderCancelled(event events.OrderEvent) {
 }
 
 // send is the shared Brevo API call used by all email methods.
-func (h *EmailHandler) send(to, subject, htmlContent string) {
+func (h *EmailHandler) send(ctx context.Context, to, subject, htmlContent string) {
 	if to == "" {
 		h.log.Warn().Str("subject", subject).Msg("skipping email — recipient address is empty")
 		return
 	}
 
-	ctx := context.WithValue(context.Background(), brevo.ContextAPIKey, brevo.APIKey{Key: h.apiKey})
+	ctx = context.WithValue(ctx, brevo.ContextAPIKey, brevo.APIKey{Key: h.apiKey})
 	_, _, err := h.client.TransactionalEmailsApi.SendTransacEmail(
 		ctx,
 		brevo.SendSmtpEmail{
