@@ -14,8 +14,8 @@ import (
 // newTestDispatcher creates a dispatcher wired with real handlers for testing.
 func newTestDispatcher(bus *events.Bus) *Dispatcher {
 	log := logger.New("notification-test")
-	email := handler.NewEmailHandler(log)
-	internal := handler.NewInternalHandler("warehouse@test.com", log)
+	email := handler.NewEmailHandler("", "", "", log)
+	internal := handler.NewInternalHandler("", "", "", "warehouse@test.com", log)
 	return NewDispatcher(bus, email, internal, log)
 }
 
@@ -65,7 +65,7 @@ func TestDispatcher_PanicRecovery(t *testing.T) {
 
 	// EmailHandler that panics
 	panicEmail := &panicEmailHandler{}
-	internal := handler.NewInternalHandler("warehouse@test.com", log)
+	internal := handler.NewInternalHandler("", "", "", "warehouse@test.com", log)
 	d := NewDispatcher(bus, panicEmail, internal, log)
 
 	ctx, cancel := context.WithCancel(context.Background())

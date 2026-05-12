@@ -12,9 +12,14 @@ import (
 	"retail-platform/notification/internal/server"
 	"retail-platform/pkg/events"
 	"retail-platform/pkg/logger"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	// Load .env file if present (local development only)
+	_ = godotenv.Load()
+
 	// Step 1: Config
 	cfg := config.Load()
 
@@ -31,8 +36,8 @@ func main() {
 	log.Info().Msg("redis event bus connected")
 
 	// Step 4: Handlers
-	emailHandler := handler.NewEmailHandler(log)
-	internalHandler := handler.NewInternalHandler(cfg.WarehouseEmail, log)
+	emailHandler := handler.NewEmailHandler(cfg.BrevoAPIKey, cfg.EmailFrom, cfg.EmailFromName, log)
+	internalHandler := handler.NewInternalHandler(cfg.BrevoAPIKey, cfg.EmailFrom, cfg.EmailFromName, cfg.WarehouseEmail, log)
 
 	// Step 5: Dispatcher — wires handlers to the event bus
 	d := dispatcher.NewDispatcher(eventBus, emailHandler, internalHandler, log)
