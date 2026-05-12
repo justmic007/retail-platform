@@ -16,6 +16,9 @@ type Config struct {
 
 	// Redis — for event bus (Redis Pub/Sub)
 	RedisURL string `env:"REDIS_URL" envDefault:"redis://localhost:6379/0"`
+
+	// WarehouseEmail — recipient for internal low stock alerts
+	WarehouseEmail string `env:"WAREHOUSE_EMAIL" envDefault:"workfromhomenoni@gmail.com"`
 }
 
 // Load reads all environment variables and returns a populated Config.

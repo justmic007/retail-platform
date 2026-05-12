@@ -32,7 +32,7 @@ func main() {
 
 	// Step 4: Handlers
 	emailHandler := handler.NewEmailHandler(log)
-	internalHandler := handler.NewInternalHandler(log)
+	internalHandler := handler.NewInternalHandler(cfg.WarehouseEmail, log)
 
 	// Step 5: Dispatcher — wires handlers to the event bus
 	d := dispatcher.NewDispatcher(eventBus, emailHandler, internalHandler, log)
