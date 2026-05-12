@@ -136,7 +136,7 @@ func (s *AuthService) Login(ctx context.Context, req domain.LoginRequest) (*doma
 	}
 
 	// Step 3: Generate access token (JWT).
-	accessToken, err := s.jwt.GenerateAccessToken(user.ID, string(user.Role))
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role))
 	if err != nil {
 		return nil, fmt.Errorf("generate access token: %w", err)
 	}
@@ -193,7 +193,7 @@ func (s *AuthService) Refresh(ctx context.Context, req domain.RefreshRequest) (*
 	}
 
 	// Generate new token pair.
-	accessToken, err := s.jwt.GenerateAccessToken(user.ID, string(user.Role))
+	accessToken, err := s.jwt.GenerateAccessToken(user.ID, user.Email, string(user.Role))
 	if err != nil {
 		return nil, fmt.Errorf("refresh - generate access token: %w", err)
 	}

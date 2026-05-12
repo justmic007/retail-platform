@@ -36,6 +36,7 @@ func NewOrderHandler(svc *service.OrderService, v *validator.Validator, log *log
 // Returns 202 Accepted immediately — processing happens asynchronously.
 func (h *OrderHandler) CreateOrder(c *gin.Context) {
 	userID := c.GetString(middleware.UserIDKey)
+	userEmail := c.GetString(middleware.UserEmailKey)
 	var req domain.CreateOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
@@ -51,6 +52,8 @@ func (h *OrderHandler) CreateOrder(c *gin.Context) {
 		})
 		return
 	}
+
+	req.UserEmail = userEmail
 
 	order, err := h.service.CreateOrder(c.Request.Context(), userID, req)
 	if err != nil {

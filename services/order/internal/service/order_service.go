@@ -69,6 +69,7 @@ func (s *OrderService) CreateOrder(ctx context.Context, userID string, req domai
 	// Items have no price yet — worker fetches from Inventory Service
 	order := &domain.Order{
 		UserID:         userID,
+		UserEmail:      req.UserEmail,
 		Status:         domain.StatusPending,
 		IdempotencyKey: req.IdempotencyKey,
 		Notes:          req.Notes,
@@ -147,9 +148,10 @@ func (s *OrderService) CancelOrder(ctx context.Context, orderID, userID string) 
 
 	// Publish OrderCancelled event — best-effort, ignore error
 	_ = s.eventBus.PublishOrder(ctx, events.OrderEvent{
-		Type:    events.EventOrderCancelled,
-		OrderID: orderID,
-		UserID:  userID,
+		Type:      events.EventOrderCancelled,
+		OrderID:   orderID,
+		UserID:    userID,
+		UserEmail: order.UserEmail,
 	})
 
 	s.log.Info().

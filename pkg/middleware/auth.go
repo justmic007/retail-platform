@@ -20,8 +20,9 @@ import (
 //	role   := c.GetString(middleware.RoleKey)
 
 const (
-	UserIDKey = "user_id"
-	RoleKey   = "role"
+	UserIDKey    = "user_id"
+	UserEmailKey = "user_email"
+	RoleKey      = "role"
 )
 
 // AuthMiddleware returns a Gin middleware function that validates JWTs.
@@ -92,6 +93,7 @@ func AuthMiddleware(jwtManager *jwt.Manager) gin.HandlerFunc {
 		// Any handler after this middleware can read the authenticated user's
 		// identity without touching the database — it's all from the JWT.
 		c.Set(UserIDKey, claims.UserID)
+		c.Set(UserEmailKey, claims.UserEmail)
 		c.Set(RoleKey, claims.Role)
 
 		// ── Step 5: Continue to the handler ──────────────────────────────
