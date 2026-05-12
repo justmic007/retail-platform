@@ -55,8 +55,12 @@ func main() {
 	// Step 6: Repository
 	orderRepo := repository.NewPostgresOrderRepo(db)
 
-	// Step 7: Event bus — order → notification
-	eventBus := events.NewBus()
+	// Step 7: Event bus — Redis Pub/Sub for cross-service event delivery
+	eventBus, err := events.NewRedisBus(cfg.RedisURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to redis event bus")
+	}
+	log.Info().Msg("redis event bus connected")
 
 	// Step 8: Worker processor + pool
 	processor := worker.NewOrderProcessor(orderRepo, inventoryClient, eventBus, log)

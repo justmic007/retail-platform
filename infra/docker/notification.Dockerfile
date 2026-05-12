@@ -1,4 +1,4 @@
-# infra/docker/inventory.Dockerfile
+# infra/docker/notification.Dockerfile
 #
 # Multi-stage build — two stages:
 #   Stage 1 (builder): full Go toolchain, compiles the binary
@@ -31,21 +31,21 @@ COPY services/inventory/go.mod services/inventory/go.sum ./services/inventory/
 COPY services/notification/go.mod services/notification/go.sum ./services/notification/
 
 # Download dependencies (cached unless go.mod changes)
-RUN cd services/inventory && go mod download
+RUN cd services/notification && go mod download
 
 # Copy source code
 COPY pkg/ ./pkg/
-COPY services/inventory/ ./services/inventory/
+COPY services/notification/ ./services/notification/
 
 # Build the binary
 # CGO_ENABLED=0: pure Go binary, no C dependencies
 # -ldflags="-w -s": strip debug info — smaller binary
-# -o /app/bin/inventory: output path
+# -o /app/bin/notification: output path
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build \
     -ldflags="-w -s" \
-    -o /app/bin/inventory \
-    ./services/inventory/cmd/server/...
+    -o /app/bin/notification \
+    ./services/notification/cmd/server/...
 
 # ── Stage 2: Final image ──────────────────────────────────────────────────────
 # distroless/static: Google's minimal base image
@@ -58,14 +58,14 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 # Copy only the compiled binary from the builder stage
-COPY --from=builder /app/bin/inventory /inventory
+COPY --from=builder /app/bin/notification /notification
 
 # Run as non-root user (distroless provides user 65532 = "nonroot")
 # Never run production containers as root
 USER nonroot:nonroot
 
 # Document which port this service listens on
-EXPOSE 8082
+EXPOSE 8083
 
 # The binary IS the entrypoint — no shell wrapper
-ENTRYPOINT ["/inventory"]
+ENTRYPOINT ["/notification"]

@@ -35,11 +35,12 @@ func (r *postgresOrderRepo) Create(ctx context.Context, order *domain.Order) (*d
 
 	// Insert the order — RETURNING gives us DB-generated id and timestamps
 	err = tx.QueryRow(ctx, `
-		INSERT INTO orders (user_id, status, total_amount, idempotency_key, notes)
-		VALUES ($1, $2, $3, $4, $5)
-		RETURNING id, user_id, status, total_amount, idempotency_key, notes, created_at, updated_at
+		INSERT INTO orders (user_id, user_email, status, total_amount, idempotency_key, notes)
+		VALUES ($1, $2, $3, $4, $5, $6)
+		RETURNING id, user_id, user_email, status, total_amount, idempotency_key, notes, created_at, updated_at
 	`,
 		order.UserID,
+		order.UserEmail,
 		order.Status,
 		order.TotalAmount,
 		order.IdempotencyKey,
@@ -47,6 +48,7 @@ func (r *postgresOrderRepo) Create(ctx context.Context, order *domain.Order) (*d
 	).Scan(
 		&order.ID,
 		&order.UserID,
+		&order.UserEmail,
 		&order.Status,
 		&order.TotalAmount,
 		&order.IdempotencyKey,
@@ -90,12 +92,13 @@ func (r *postgresOrderRepo) Create(ctx context.Context, order *domain.Order) (*d
 func (r *postgresOrderRepo) FindByIDInternal(ctx context.Context, orderID string) (*domain.Order, error) {
 	order := &domain.Order{}
 	err := r.db.QueryRow(ctx, `
-		SELECT id, user_id, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
+		SELECT id, user_id, user_email, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
 		FROM orders
 		WHERE id = $1
 	`, orderID).Scan(
 		&order.ID,
 		&order.UserID,
+		&order.UserEmail,
 		&order.Status,
 		&order.PaymentStatus,
 		&order.TotalAmount,
@@ -125,12 +128,13 @@ func (r *postgresOrderRepo) FindByIDInternal(ctx context.Context, orderID string
 func (r *postgresOrderRepo) FindByID(ctx context.Context, orderID, userID string) (*domain.Order, error) {
 	order := &domain.Order{}
 	err := r.db.QueryRow(ctx, `
-		SELECT id, user_id, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
+		SELECT id, user_id, user_email, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
 		FROM orders
 		WHERE id = $1 AND user_id = $2
 	`, orderID, userID).Scan(
 		&order.ID,
 		&order.UserID,
+		&order.UserEmail,
 		&order.Status,
 		&order.PaymentStatus,
 		&order.TotalAmount,
@@ -159,7 +163,7 @@ func (r *postgresOrderRepo) FindByID(ctx context.Context, orderID, userID string
 // FindByUserID returns all orders for a user, newest first.
 func (r *postgresOrderRepo) FindByUserID(ctx context.Context, userID string) ([]*domain.Order, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, user_id, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
+		SELECT id, user_id, user_email, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
 		FROM orders
 		WHERE user_id = $1
 		ORDER BY created_at DESC
@@ -175,6 +179,7 @@ func (r *postgresOrderRepo) FindByUserID(ctx context.Context, userID string) ([]
 		err := rows.Scan(
 			&order.ID,
 			&order.UserID,
+			&order.UserEmail,
 			&order.Status,
 			&order.PaymentStatus,
 			&order.TotalAmount,
@@ -235,12 +240,13 @@ func (r *postgresOrderRepo) UpdateStatusAndTotal(ctx context.Context, orderID st
 func (r *postgresOrderRepo) FindByIdempotencyKey(ctx context.Context, key, userID string) (*domain.Order, error) {
 	order := &domain.Order{}
 	err := r.db.QueryRow(ctx, `
-		SELECT id, user_id, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
+		SELECT id, user_id, user_email, status, payment_status, total_amount, idempotency_key, notes, created_at, updated_at
 		FROM orders
 		WHERE idempotency_key = $1 AND user_id = $2
 	`, key, userID).Scan(
 		&order.ID,
 		&order.UserID,
+		&order.UserEmail,
 		&order.Status,
 		&order.PaymentStatus,
 		&order.TotalAmount,

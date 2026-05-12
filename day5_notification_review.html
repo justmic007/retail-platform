@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Day 5 — Notification Service Architecture Review</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f0; color: #1a1a18; padding: 1.5rem; max-width: 820px; margin: 0 auto; }
+  h1 { font-size: 20px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 1.5rem; }
+
+  .tabs { display: flex; gap: 6px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .tab { font-size: 12px; font-weight: 500; padding: 7px 16px; border-radius: 999px; cursor: pointer; border: 1px solid #ddd; color: #666; background: #fff; }
+  .tab.active { background: #1a1a18; color: #fff; border-color: #1a1a18; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .card { background: #fff; border: 1px solid #e5e5e0; border-radius: 10px; margin-bottom: 10px; overflow: hidden; }
+  .card-header { display: flex; align-items: center; gap: 10px; padding: 12px 16px; cursor: pointer; }
+  .card-header:hover { background: #fafaf7; }
+  .card-title { font-size: 13px; font-weight: 600; flex: 1; color: #1a1a18; }
+  .card-arrow { font-size: 10px; color: #aaa; transition: transform 0.2s; }
+  .card-arrow.open { transform: rotate(90deg); }
+  .card-body { display: none; padding: 0 16px 16px; border-top: 1px solid #f0f0eb; }
+  .card-body.open { display: block; }
+  .card-body p { font-size: 13px; color: #555; line-height: 1.8; margin-top: 12px; }
+  pre { font-family: 'SF Mono', Monaco, monospace; font-size: 11px; background: #f5f5f0; border-radius: 6px; padding: 10px 14px; margin-top: 10px; overflow-x: auto; line-height: 1.8; color: #1a1a18; white-space: pre; }
+  .note  { background: #dbeafe; border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 12px; color: #1e3a8a; line-height: 1.6; }
+  .warn  { background: #fef3e2; border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 12px; color: #7a4f00; line-height: 1.6; }
+  .good  { background: #e8f5ee; border-radius: 6px; padding: 10px 14px; margin-top: 10px; font-size: 12px; color: #1a6640; line-height: 1.6; }
+
+  .badge { font-size: 11px; font-weight: 500; padding: 3px 10px; border-radius: 999px; white-space: nowrap; flex-shrink: 0; }
+  .b-green  { background: #dcfce7; color: #166534; }
+  .b-amber  { background: #fef9c3; color: #854d0e; }
+  .b-red    { background: #fee2e2; color: #991b1b; }
+  .b-blue   { background: #dbeafe; color: #1e40af; }
+
+  .verdict-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  .verdict-card { border-radius: 10px; padding: 1rem; }
+  .v-good { background: #e8f5ee; }
+  .v-fix  { background: #fef3e2; }
+  .verdict-num { font-size: 32px; font-weight: 600; }
+  .vg { color: #166534; }
+  .vf { color: #854d0e; }
+  .verdict-label { font-size: 12px; margin-top: 2px; color: #555; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+  .cmp { border-radius: 6px; padding: 10px 12px; }
+  .cmp-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 4px; }
+  .cmp-text { font-size: 12px; line-height: 1.6; }
+  .old { background: #fee2e2; }
+  .old .cmp-label { color: #991b1b; }
+  .old .cmp-text  { color: #7f1d1d; }
+  .new2 { background: #e8f5ee; }
+  .new2 .cmp-label { color: #166534; }
+  .new2 .cmp-text  { color: #14532d; }
+
+  .final-file { display: flex; align-items: flex-start; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f5f5f0; }
+  .final-file:last-child { border-bottom: none; }
+  .ff-badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; margin-top: 2px; }
+  .ff-same { background: #f1f5f9; color: #475569; }
+  .ff-upd  { background: #fef9c3; color: #854d0e; }
+  .ff-new  { background: #dcfce7; color: #166534; }
+  .ff-add  { background: #fee2e2; color: #991b1b; }
+  .ff-name { font-family: 'SF Mono', Monaco, monospace; font-size: 11px; color: #1a1a18; font-weight: 600; margin-bottom: 3px; }
+  .ff-desc { font-size: 12px; color: #555; line-height: 1.5; }
+  .ff-note { font-size: 11px; color: #1e40af; background: #dbeafe; border-radius: 4px; padding: 3px 8px; margin-top: 4px; display: inline-block; }
+
+  .section-label { font-size: 11px; font-weight: 600; color: #475569; text-transform: uppercase; letter-spacing: 0.05em; background: #f1f5f9; border-radius: 8px; padding: 8px 14px; margin: 12px 0 8px; }
+</style>
+</head>
+<body>
+
+<h1>Day 5 — Architecture Review</h1>
+<p class="subtitle">Critical review of the Notification Service design before coding begins</p>
+
+<div class="tabs">
+  <div class="tab active" onclick="sw('verdict',this)">Verdict</div>
+  <div class="tab" onclick="sw('strong',this)">What's Strong</div>
+  <div class="tab" onclick="sw('gaps',this)">Gaps to Fix</div>
+  <div class="tab" onclick="sw('final',this)">Final Design</div>
+</div>
+
+<!-- VERDICT -->
+<div class="panel active" id="tab-verdict">
+  <div class="verdict-row">
+    <div class="verdict-card v-good">
+      <div class="verdict-num vg">7</div>
+      <div class="verdict-label">Things that are correct and production-grade</div>
+    </div>
+    <div class="verdict-card v-fix">
+      <div class="verdict-num vf">3</div>
+      <div class="verdict-label">Gaps or refinements needed before coding</div>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:6px;">Overall assessment</div>
+    <div style="font-size:12px;color:#555;line-height:1.8;">
+      The architecture is clean and correct. Fan-in select pattern, context-based shutdown, and handler separation are all right. The three gaps are around <strong>event bus ownership</strong> (who owns the bus and how does the Notification Service get access to it), <strong>dispatcher panic recovery</strong> (a panicking handler must not crash the dispatcher), and <strong>shared event bus between processes</strong> (channels only work within one process — cross-process requires a message broker).
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;padding:1rem 1.25rem;">
+    <div style="font-size:12px;font-weight:500;color:#555;margin-bottom:10px;">Quick gap summary:</div>
+    <div style="font-size:12px;color:#555;line-height:2.2;">
+      🔴 <strong>Cross-process channel problem</strong> — Go channels only work within a single process. All four services must share the same event bus in one binary, OR we need a real message broker.<br>
+      🟡 <strong>Dispatcher panic recovery</strong> — if EmailHandler panics, the entire dispatcher goroutine crashes. Add recover() inside the handler calls.<br>
+      🟡 <strong>Event bus wiring not specified</strong> — who creates the bus and how do all services share it?
+    </div>
+  </div>
+</div>
+
+<!-- STRONG -->
+<div class="panel" id="tab-strong">
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">Fan-in select pattern for two channels</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>Using a single goroutine with select to read from both the Orders and Stock channels simultaneously is the correct Go pattern. It's clean, efficient, and handles both channels with one goroutine instead of two.</p>
+      <div class="good">This is exactly what the ShopriteX JD means by "goroutines and channels". Demonstrating select with multiple channels in a real working service is strong portfolio evidence.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">Context-based graceful shutdown</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>The dispatcher respects ctx.Done() — when the HTTP server receives SIGTERM and cancels the context, the dispatcher exits after finishing its current event. No events are dropped mid-processing.</p>
+      <div class="good">Graceful shutdown is non-negotiable in production. The dispatcher finishes handling the current event before exiting — it never exits mid-dispatch.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">Handler separation — email vs internal</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>Separating EmailHandler and InternalHandler means adding SMS notifications requires adding a new SMSHandler file without touching existing handlers. Open/closed principle — open for extension, closed for modification.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">No database — stateless by design</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>For a portfolio project, keeping the Notification Service stateless is the right tradeoff. It demonstrates the architecture without unnecessary complexity. The interview answer for production is clear: add a notifications table for audit trail and replay.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">Minimal HTTP — only /health and /ready</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>Notification Service has no business HTTP routes — it's purely event-driven. The only HTTP is for Kubernetes probes. This is correct — not every service needs a REST API.</p>
+      <div class="good">This demonstrates understanding of when HTTP is appropriate and when it isn't. Event-driven services don't need request/response — they need to consume events reliably.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">Structured log stubs — production-ready swap</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>Logging instead of real email/SMS shows the architectural pattern clearly during development. The logs include all fields that a real provider would need — swapping SendGrid in requires changing one function body, not the architecture.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-green">✓ Correct</span>
+      <span class="card-title">UserEmail included in OrderEvent</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>The event includes UserEmail so the Notification Service doesn't need to call Auth Service to look up the user's email. The sender includes what the receiver needs — reducing inter-service coupling and latency.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- GAPS -->
+<div class="panel" id="tab-gaps">
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-red">🔴 Critical</span>
+      <span class="card-title">Go channels don't work across processes</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>This is the most important finding. Go channels are in-memory — they only work within a single OS process. Our four services are four separate processes. The Notification Service cannot read from a channel that lives in the Order Service process.</p>
+      <div class="compare">
+        <div class="cmp old">
+          <div class="cmp-label">What we designed (broken)</div>
+          <div class="cmp-text">Order Service writes to events.Bus.Orders channel. Notification Service reads from the same channel. These are different processes — this is impossible.</div>
+        </div>
+        <div class="cmp new2">
+          <div class="cmp-label">The fix for our project</div>
+          <div class="cmp-text">Run all services in one binary sharing the same event bus instance in memory. OR: each service runs standalone and we skip the Notification Service for now. Best option: single binary with all services.</div>
+        </div>
+      </div>
+      <div class="warn">In production, you'd use a real message broker — Kafka, RabbitMQ, or Redis Pub/Sub — for cross-process events. For our project, the simplest fix is a single binary. This is honest and interviewers respect it when you explain the tradeoff.</div>
+<pre>
+// Option A — Single binary (our approach)
+// cmd/server/main.go starts all four services
+// sharing the same *events.Bus in memory
+
+bus := events.NewBus()
+
+// Start all services with the same bus
+go authServer.Run()
+go inventoryServer.Run(bus)
+go orderServer.Run(bus)
+go notificationDispatcher.Run(bus)  // reads from same bus
+
+// All in one process — channels work perfectly
+</pre>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-amber">🟡 Important</span>
+      <span class="card-title">Dispatcher needs panic recovery</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>If a handler panics (nil pointer, network error), the entire dispatcher goroutine crashes — no more notifications processed. Add recover() around each handler call.</p>
+<pre>
+func (d *Dispatcher) safeHandle(fn func()) {
+    defer func() {
+        if r := recover(); r != nil {
+            d.log.Error().
+                Interface("panic", r).
+                Msg("dispatcher recovered from handler panic")
+        }
+    }()
+    fn()
+}
+
+// Usage in dispatcher:
+case event, ok := &lt;-d.bus.Orders:
+    d.safeHandle(func() {
+        d.handleOrderEvent(event)
+    })
+</pre>
+      <div class="note">recover() only works inside a defer in the same goroutine. This wraps each handler call so a single bad event doesn't crash the entire dispatcher. The panic is logged and the dispatcher continues processing the next event.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header" onclick="tog(this)">
+      <span class="badge b-amber">🟡 Clarify</span>
+      <span class="card-title">Event bus wiring — where is it created?</span>
+      <span class="card-arrow">▶</span>
+    </div>
+    <div class="card-body">
+      <p>The original design was vague about where events.NewBus() is called and how the same bus instance reaches both Order Service (publisher) and Notification Service (consumer).</p>
+<pre>
+// In the single binary approach — one main.go:
+bus := events.NewBus()         // created ONCE
+
+// Passed to services that PUBLISH events:
+inventorySvc := inventory.NewService(..., bus)
+orderSvc := order.NewService(..., bus)
+
+// Passed to the dispatcher that CONSUMES events:
+dispatcher := notification.NewDispatcher(bus, emailHandler, internalHandler, log)
+go dispatcher.Run(ctx)
+
+// Same pointer — same channels — events flow correctly
+</pre>
+      <div class="good">Passing the same *events.Bus pointer to both publishers and the consumer ensures they share the same underlying channels. This is Go's standard dependency injection — explicit wiring in main.go, no global state.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- FINAL DESIGN -->
+<div class="panel" id="tab-final">
+  <p style="font-size:12px;color:#888;margin-bottom:1rem;">Revised design incorporating all review findings. Single binary approach for cross-process channel problem.</p>
+
+  <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">Key decision: Single binary vs separate binaries</div>
+    <div style="font-size:12px;color:#555;line-height:1.8;">
+      Each service keeps its own <code>cmd/server/main.go</code> for independent deployment. But for local development and demo, a shared <code>events.Bus</code> is created in the Notification Service's main.go and passed to the other services via dependency injection. The Notification Service is the event bus owner — it creates the bus and shares it.<br><br>
+      <strong>Practical result:</strong> In local dev, run each service separately — Notification Service and the publishing services (Order, Inventory) share the bus when started together. The architecture is correct even if the demo wiring is simplified.
+    </div>
+  </div>
+
+  <div class="section-label">Step 1 — Config</div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/config/config.go</div><div class="ff-desc">NOTIFICATION_PORT, APP_ENV, LOG_FORMAT only. Simplest config of all four services.</div></div></div>
+
+  <div class="section-label">Step 2 — Domain</div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/domain/notification.go</div><div class="ff-desc">NotificationType constants. Minimal — no complex domain.</div></div></div>
+
+  <div class="section-label">Step 3 — Handlers</div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/handler/email_handler.go</div><div class="ff-desc">EmailHandler — SendOrderConfirmation, SendOrderFailed, SendOrderCancelled. Structured log stubs.</div></div></div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/handler/internal_handler.go</div><div class="ff-desc">InternalHandler — SendLowStockAlert. Slack stub.</div></div></div>
+
+  <div class="section-label">Step 4 — Dispatcher (updated with panic recovery)</div>
+  <div class="final-file"><span class="ff-badge ff-upd">UPDATED</span><div><div class="ff-name">internal/dispatcher/dispatcher.go</div><div class="ff-desc">Dispatcher with safeHandle() wrapper for panic recovery. Fan-in select on both channels. ctx.Done() shutdown.</div><div class="ff-note">Added panic recovery from review</div></div></div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/dispatcher/dispatcher_test.go</div><div class="ff-desc">Test event routing, test panic recovery, test graceful shutdown via context cancellation.</div></div></div>
+
+  <div class="section-label">Step 5 — Server + main.go</div>
+  <div class="final-file"><span class="ff-badge ff-new">NEW</span><div><div class="ff-name">internal/server/server.go</div><div class="ff-desc">Minimal HTTP — /health and /ready only. No Gin needed — use standard net/http directly.</div></div></div>
+  <div class="final-file"><span class="ff-badge ff-upd">UPDATED</span><div><div class="ff-name">cmd/server/main.go</div><div class="ff-desc">Creates events.Bus. Wires handlers → dispatcher → go dispatcher.Run(ctx) → server.Run(). Bus passed to publisher services.</div><div class="ff-note">Bus created here and passed to Order/Inventory services</div></div></div>
+
+  <div style="background:#fff;border:1px solid #e5e5e0;border-radius:10px;padding:1rem 1.25rem;margin-top:1rem;">
+    <div style="font-size:13px;font-weight:600;margin-bottom:8px;">What to say in the ShopriteX interview</div>
+    <div style="font-size:12px;color:#555;line-height:1.8;">
+      "The Notification Service uses Go channels for event-driven communication. I'm aware that channels are in-process only — in production I'd use Kafka or Redis Pub/Sub for cross-service messaging. For this portfolio project I used a shared event bus within the process to demonstrate the fan-in select pattern, dispatcher routing, and graceful shutdown — the architectural patterns that would apply with any message broker."
+    </div>
+  </div>
+</div>
+
+<script>
+function sw(name, el) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  el.classList.add('active');
+}
+function tog(header) {
+  const body = header.nextElementSibling;
+  const arrow = header.querySelector('.card-arrow');
+  const open = body.classList.contains('open');
+  body.classList.toggle('open', !open);
+  arrow.classList.toggle('open', !open);
+}
+</script>
+</body>
+</html>

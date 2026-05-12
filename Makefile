@@ -104,6 +104,9 @@ test-inventory:
 test-order:
 	cd services/order && go test -race ./... -v
 
+test-notification:
+	cd services/notification && go test -race ./... -v
+
 test:
 	cd pkg && go test ./...
 	cd services/auth && go test ./...

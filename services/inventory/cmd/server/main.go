@@ -47,8 +47,12 @@ func main() {
 	}
 	log.Info().Msg("redis cache connected")
 
-	// Step 5: Event bus — for publishing StockLow events
-	eventBus := events.NewBus()
+	// Step 5: Event bus — Redis Pub/Sub for cross-service event delivery
+	eventBus, err := events.NewRedisBus(cfg.RedisURL)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to connect to redis event bus")
+	}
+	log.Info().Msg("redis event bus connected")
 
 	// Step 6: JWT Manager — validates tokens issued by Auth Service
 	jwtManager := jwt.NewManager(cfg.JWTSecret, 15*time.Minute, 168*time.Hour)

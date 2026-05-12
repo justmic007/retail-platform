@@ -11,9 +11,10 @@
 # This is how Stripe, Cloudflare, and Google deploy Go services.
 
 # ── Stage 1: Builder ──────────────────────────────────────────────────────────
-FROM golang:1.22-alpine AS builder
+FROM golang:1.25-alpine AS builder
 
 # Install git (needed by some Go modules) and CA certificates (for HTTPS calls)
+ENV GOTOOLCHAIN=auto
 RUN apk add --no-cache git ca-certificates tzdata
 
 WORKDIR /app
@@ -22,9 +23,12 @@ WORKDIR /app
 COPY go.work go.work.sum ./
 
 # Copy all go.mod files so Docker can cache dependency downloads
-# If go.mod files don't change, Docker uses cached layers — faster builds
+# go.work references all modules — all go.mod files must be present
 COPY pkg/go.mod pkg/go.sum ./pkg/
 COPY services/auth/go.mod services/auth/go.sum ./services/auth/
+COPY services/order/go.mod services/order/go.sum ./services/order/
+COPY services/inventory/go.mod services/inventory/go.sum ./services/inventory/
+COPY services/notification/go.mod services/notification/go.sum ./services/notification/
 
 # Download dependencies (cached unless go.mod changes)
 RUN cd services/auth && go mod download

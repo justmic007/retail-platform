@@ -29,7 +29,7 @@ type reservedItem struct {
 type OrderProcessor struct {
 	repo            repository.OrderRepository
 	inventoryClient client.InventoryClientInterface
-	eventBus        *events.Bus
+	eventBus        events.Publisher
 	log             *logger.Logger
 }
 
@@ -37,7 +37,7 @@ type OrderProcessor struct {
 func NewOrderProcessor(
 	repo repository.OrderRepository,
 	inventoryClient client.InventoryClientInterface,
-	eventBus *events.Bus,
+	eventBus events.Publisher,
 	log *logger.Logger,
 ) *OrderProcessor {
 	return &OrderProcessor{
@@ -73,7 +73,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 	// the worker is an internal process not a user request
 	order, err := p.fetchOrder(ctx, orderID)
 	if err != nil {
-		p.failOrder(ctx, orderID, "", err)
+		p.failOrder(ctx, orderID, "", "", err)
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 		product, err := p.inventoryClient.GetProduct(ctx, item.ProductID)
 		if err != nil {
 			p.releaseAll(ctx, reserved, orderID)
-			p.failOrder(ctx, orderID, order.UserID, err)
+			p.failOrder(ctx, orderID, order.UserID, order.UserEmail, err)
 			return fmt.Errorf("get product %s: %w", item.ProductID, err)
 		}
 
@@ -100,7 +100,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 	// Step 4 — Persist price snapshots to order_items
 	if err := p.repo.UpdateItems(ctx, order.Items); err != nil {
 		p.releaseAll(ctx, reserved, orderID)
-		p.failOrder(ctx, orderID, order.UserID, err)
+		p.failOrder(ctx, orderID, order.UserID, order.UserEmail, err)
 		return fmt.Errorf("update order items: %w", err)
 	}
 
@@ -109,7 +109,7 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 		if err := p.inventoryClient.Reserve(ctx, item.ProductID, item.Quantity, orderID); err != nil {
 			// Release all previously reserved items
 			p.releaseAll(ctx, reserved, orderID)
-			p.failOrder(ctx, orderID, order.UserID, err)
+			p.failOrder(ctx, orderID, order.UserID, order.UserEmail, err)
 			return fmt.Errorf("reserve stock for product %s: %w", item.ProductID, err)
 		}
 		reserved = append(reserved, reservedItem{
@@ -118,15 +118,15 @@ func (p *OrderProcessor) ProcessOrder(ctx context.Context, orderID string) error
 		})
 	}
 
-	// Step 5 — Update status → CONFIRMED with calculated total
+	// Step 6 — Update status → CONFIRMED with calculated total
 	if err := p.repo.UpdateStatusAndTotal(ctx, orderID, domain.StatusConfirmed, totalAmount); err != nil {
 		p.releaseAll(ctx, reserved, orderID)
-		p.failOrder(ctx, orderID, order.UserID, err)
+		p.failOrder(ctx, orderID, order.UserID, order.UserEmail, err)
 		return fmt.Errorf("update status to confirmed: %w", err)
 	}
 
-	// Step 6 — Publish OrderConfirmed event
-	p.publishOrderEvent(events.EventOrderConfirmed, orderID, order.UserID, totalAmount)
+	// Step 7 — Publish OrderConfirmed event
+	p.publishOrderEvent(ctx, events.EventOrderConfirmed, orderID, order.UserID, order.UserEmail, totalAmount)
 
 	p.log.Info().
 		Str("order_id", orderID).
@@ -161,28 +161,27 @@ func (p *OrderProcessor) releaseAll(ctx context.Context, reserved []reservedItem
 }
 
 // failOrder updates the order status to FAILED and publishes an event.
-func (p *OrderProcessor) failOrder(ctx context.Context, orderID, userID string, reason error) {
+func (p *OrderProcessor) failOrder(ctx context.Context, orderID, userID, userEmail string, reason error) {
 	p.log.Error().Err(reason).Str("order_id", orderID).Msg("order failed")
 
 	if err := p.repo.UpdateStatus(ctx, orderID, domain.StatusFailed); err != nil {
 		p.log.Error().Err(err).Str("order_id", orderID).Msg("failed to update order status to FAILED")
 	}
 
-	p.publishOrderEvent(events.EventOrderFailed, orderID, userID, decimal.Zero)
+	p.publishOrderEvent(ctx, events.EventOrderFailed, orderID, userID, "", decimal.Zero)
 }
 
 // publishOrderEvent publishes an order event to the event bus non-blocking.
-// If the channel is full the event is dropped — notifications are best-effort.
-func (p *OrderProcessor) publishOrderEvent(eventType events.EventType, orderID, userID string, total decimal.Decimal) {
-	select {
-	case p.eventBus.Orders <- events.OrderEvent{
+// If the publish fails the error is logged — notifications are best-effort.
+func (p *OrderProcessor) publishOrderEvent(ctx context.Context, eventType events.EventType, orderID, userID, userEmail string, total decimal.Decimal) {
+	if err := p.eventBus.PublishOrder(ctx, events.OrderEvent{
 		Type:       eventType,
 		OrderID:    orderID,
 		UserID:     userID,
+		UserEmail:  userEmail,
 		Total:      total.InexactFloat64(),
 		OccurredAt: time.Now(),
-	}:
-	default:
-		// Channel full — skip, don't block
+	}); err != nil {
+		p.log.Warn().Err(err).Str("order_id", orderID).Msg("failed to publish order event")
 	}
 }

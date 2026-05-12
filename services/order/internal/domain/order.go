@@ -32,6 +32,7 @@ const (
 type Order struct {
 	ID             string
 	UserID         string
+	UserEmail      string
 	Status         OrderStatus
 	PaymentStatus  PaymentStatus
 	TotalAmount    decimal.Decimal
@@ -60,11 +61,12 @@ type OrderItem struct {
 // - Request types ------------------------------------------------------------------------------------
 
 // CreateOrderRequest is the body for POST /orders
-// Client sends product_id and quantiry only - unit_price is fetched
+// Client sends product_id and quantity only - unit_price is fetched
 // from Inventory Service by the worker processor, never trusted from client.
 type CreateOrderRequest struct {
 	Items          []OrderItemRequest `json:"items" validate:"required,min=1"`
 	IdempotencyKey string             `json:"idempotency_key" validate:"required"`
+	UserEmail      string             `json:"-"`
 	Notes          string             `json:"notes"`
 }
 

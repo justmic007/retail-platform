@@ -9,7 +9,10 @@
 // notification service wouldn't change much. This is intentional.
 package events
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 // EventType identifies what kind of event occurred.
 type EventType string
@@ -55,6 +58,18 @@ type Bus struct {
 	Stock  chan StockEvent // Inventory service writes, Notification service reads
 }
 
+// Publisher is satisfied by *Bus (channels) and *RedisBus (Redis Pub/Sub).
+type Publisher interface {
+	PublishOrder(ctx context.Context, event OrderEvent) error
+	PublishStock(ctx context.Context, event StockEvent) error
+}
+
+// Subscriber is satisfied by *Bus (channels) and *RedisBus (Redis Pub/Sub).
+type Subscriber interface {
+	SubscribeOrders(ctx context.Context) (<-chan OrderEvent, error)
+	SubscribeStock(ctx context.Context) (<-chan StockEvent, error)
+}
+
 // NewBus creates the event bus with sensible buffer sizes.
 // Buffer size 100 means up to 100 events can be queued before the sender blocks.
 func NewBus() *Bus {
@@ -62,4 +77,30 @@ func NewBus() *Bus {
 		Orders: make(chan OrderEvent, 100),
 		Stock:  make(chan StockEvent, 50),
 	}
+}
+
+func (b *Bus) PublishOrder(ctx context.Context, event OrderEvent) error {
+	select {
+	case b.Orders <- event:
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (b *Bus) PublishStock(ctx context.Context, event StockEvent) error {
+	select {
+	case b.Stock <- event:
+		return nil
+	default:
+		return nil
+	}
+}
+
+func (b *Bus) SubscribeOrders(ctx context.Context) (<-chan OrderEvent, error) {
+	return b.Orders, nil
+}
+
+func (b *Bus) SubscribeStock(ctx context.Context) (<-chan StockEvent, error) {
+	return b.Stock, nil
 }
