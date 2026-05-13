@@ -34,6 +34,7 @@ export interface Product {
   price: number;
   category: string;
   is_active: boolean;
+  image_url: string;
   quantity: number;
   reserved: number;
   available: number;
