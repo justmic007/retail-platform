@@ -1,60 +1,58 @@
--- Inserts sample products with stock levels.
---
--- Why seed data?
--- Without it, GET /products returns an empty array — not impressive in a demo.
--- Using real Shoprite-style products (oil, rice, milk, bread, eggs) makes
--- the service feel immediately relevant when demoing to ShopriteX.
---
--- These are products a South African retailer would actually carry.
+-- 003_seed_products.up.sql
+-- Seeds the products table. image_url is added in migration 004.
 
-INSERT INTO products (id, name, description, price, sku, category) VALUES
-    (
-        'a1b2c3d4-0001-0001-0001-000000000001',
-        'Sunflower Oil 2L',
-        'Pure sunflower cooking oil, ideal for frying and baking',
-        89.99,
-        'OIL-SF-2L',
-        'Groceries'
-    ),
-    (
-        'a1b2c3d4-0002-0002-0002-000000000002',
-        'Basmati Rice 5kg',
-        'Premium long grain basmati rice',
-        129.99,
-        'RICE-BAS-5KG',
-        'Groceries'
-    ),
-    (
-        'a1b2c3d4-0003-0003-0003-000000000003',
-        'Full Cream Milk 1L',
-        'Fresh full cream pasteurised milk',
-        24.99,
-        'DAIRY-MLK-FC-1L',
-        'Dairy'
-    ),
-    (
-        'a1b2c3d4-0004-0004-0004-000000000004',
-        'White Bread 700g',
-        'Soft sliced white bread',
-        17.99,
-        'BREAD-WH-700G',
-        'Bakery'
-    ),
-    (
-        'a1b2c3d4-0005-0005-0005-000000000005',
-        'Free Range Eggs 18 Pack',
-        'Fresh free range large eggs',
-        59.99,
-        'EGGS-FR-18PK',
-        'Dairy'
-    );
+INSERT INTO products (id, sku, name, description, price, category) VALUES
+    ('a1b2c3d4-0001-0001-0001-000000000001', 'MILK-CHO-50G',         'Chocolate Milk 50g',        'Rich chocolate flavoured milk treat',                  8.99,   'Dairy'),
+    ('a1b2c3d4-0002-0002-0002-000000000002', 'WINE-FRUIT-1L',        'Fruit Wine 1L',             'Sweet and refreshing fruit flavoured wine',            89.99,  'Beverages'),
+    ('a1b2c3d4-0003-0003-0003-000000000003', 'YOGURT-SKIM-1L',       'Skim Yogurt 1L',            'Smooth and creamy low fat plain yogurt',               34.99,  'Dairy'),
+    ('a1b2c3d4-0004-0004-0004-000000000004', 'MILK-HONEY-1L',        'Honey Milk 1L',             'Full cream milk naturally sweetened with honey',       29.99,  'Dairy'),
+    ('a1b2c3d4-0005-0005-0005-000000000005', 'WIG-GOLD-1KG',         'Gold Hair Wig',             'Premium quality golden blonde hair wig',               499.99, 'Beauty'),
+    ('a1b2c3d4-0006-0006-0006-000000000006', 'WINE-ALC-2L',          'Red Wine 2L',               'Full bodied South African red wine blend',             129.99, 'Beverages'),
+    ('a1b2c3d4-0007-0007-0007-000000000007', 'SAUCE-RAGU-1KG',       'Ragu Pasta Sauce 1kg',      'Rich Italian style tomato and meat pasta sauce',       49.99,  'Groceries'),
+    ('a1b2c3d4-0008-0008-0008-000000000008', 'RICE-BES-5KG',         'Best Rice 5kg',             'Premium long grain white rice',                        89.99,  'Groceries'),
+    ('a1b2c3d4-0009-0009-0009-000000000009', 'OIL-VEGE-3L',          'Vegetable Oil 3L',          'Pure vegetable cooking oil ideal for frying',          79.99,  'Groceries'),
+    ('a1b2c3d4-0010-0010-0010-000000000010', 'SARDINE-FISH-1KG',     'Sardines in Brine 1kg',     'Wild caught sardines packed in brine',                 49.99,  'Canned Goods'),
+    ('a1b2c3d4-0011-0011-0011-000000000011', 'POT-SMALL-5L',         'Stainless Steel Pot 5L',    'Durable stainless steel cooking pot with lid',         199.99, 'Kitchenware'),
+    ('a1b2c3d4-0012-0012-0012-000000000012', 'PEFUME-WHITE-1L',      'White Perfume 1L',          'Fresh white floral fragrance for everyday wear',       149.99, 'Personal Care'),
+    ('a1b2c3d4-0013-0013-0013-000000000013', 'OLIVE-OIL-2L',         'Extra Virgin Olive Oil 2L', 'Cold pressed extra virgin olive oil',                  119.99, 'Groceries'),
+    ('a1b2c3d4-0014-0014-0014-000000000014', 'PEFUME-BLUE-1L',       'Blue Perfume 1L',           'Cool aqua blue fragrance for men and women',           149.99, 'Personal Care'),
+    ('a1b2c3d4-0015-0015-0015-000000000015', 'MILK-LOWFAT-1L',       'Low Fat Milk 1L',           'Fresh low fat pasteurised milk',                       22.99,  'Dairy'),
+    ('a1b2c3d4-0016-0016-0016-000000000016', 'MILK-TONE-1L',         'Toned Milk 1L',             'Fresh toned milk with reduced fat content',            21.99,  'Dairy'),
+    ('a1b2c3d4-0017-0017-0017-000000000017', 'CUTLERY-WOODEN-10PCS', 'Wooden Cutlery Set 10pcs',  'Eco friendly biodegradable wooden cutlery set',        49.99,  'Kitchenware'),
+    ('a1b2c3d4-0018-0018-0018-000000000018', 'LOTION-BODY-1KG',      'Body Lotion 1kg',           'Deep moisturising body lotion for all skin types',     89.99,  'Personal Care'),
+    ('a1b2c3d4-0019-0019-0019-000000000019', 'MAIZE-BAG-25KG',       'Super Maize Meal 25kg',     'Fine white super maize meal for pap and porridge',     219.99, 'Groceries'),
+    ('a1b2c3d4-0020-0020-0020-000000000020', 'BUTTER-CHERRYCOLD-1KG','Cherry Butter 1kg',         'Cold pressed cherry flavoured butter spread',          79.99,  'Dairy'),
+    ('a1b2c3d4-0021-0021-0021-000000000021', 'BOTTLE-WATER-1L',      'Still Water 1L',            'Pure natural still drinking water',                    12.99,  'Beverages'),
+    ('a1b2c3d4-0022-0022-0022-000000000022', 'EGG-CRATE-30',         'Free Range Eggs 30 Pack',   'Fresh free range large eggs crate of 30',              89.99,  'Dairy'),
+    ('a1b2c3d4-0023-0023-0023-000000000023', 'COFFEE-HOT-1L',        'Premium Instant Coffee 200g','Rich and smooth premium instant coffee',              79.99,  'Beverages'),
+    ('a1b2c3d4-0024-0024-0024-000000000024', 'BREAD-BRW-1KG',        'Brown Bread 1kg',           'Soft sliced whole wheat brown bread',                  19.99,  'Bakery'),
+    ('a1b2c3d4-0025-0025-0025-000000000025', 'EGG-CRATE-5',          'Free Range Eggs 5 Pack',    'Fresh free range large eggs pack of 5',                19.99,  'Dairy')
+ON CONFLICT (sku) DO NOTHING;
 
--- Insert corresponding stock levels for each product.
--- quantity = physical units in warehouse
--- reserved = 0 (no pending orders yet)
 INSERT INTO stock_levels (product_id, quantity, reserved, warehouse_id) VALUES
-    ('a1b2c3d4-0001-0001-0001-000000000001', 150, 0, 'main'),
+    ('a1b2c3d4-0001-0001-0001-000000000001', 500, 0, 'main'),
     ('a1b2c3d4-0002-0002-0002-000000000002', 200, 0, 'main'),
-    ('a1b2c3d4-0003-0003-0003-000000000003', 500, 0, 'main'),
-    ('a1b2c3d4-0004-0004-0004-000000000004', 300, 0, 'main'),
-    ('a1b2c3d4-0005-0005-0005-000000000005', 250, 0, 'main');
+    ('a1b2c3d4-0003-0003-0003-000000000003', 300, 0, 'main'),
+    ('a1b2c3d4-0004-0004-0004-000000000004', 400, 0, 'main'),
+    ('a1b2c3d4-0005-0005-0005-000000000005', 50,  0, 'main'),
+    ('a1b2c3d4-0006-0006-0006-000000000006', 150, 0, 'main'),
+    ('a1b2c3d4-0007-0007-0007-000000000007', 200, 0, 'main'),
+    ('a1b2c3d4-0008-0008-0008-000000000008', 300, 0, 'main'),
+    ('a1b2c3d4-0009-0009-0009-000000000009', 250, 0, 'main'),
+    ('a1b2c3d4-0010-0010-0010-000000000010', 180, 0, 'main'),
+    ('a1b2c3d4-0011-0011-0011-000000000011', 75,  0, 'main'),
+    ('a1b2c3d4-0012-0012-0012-000000000012', 100, 0, 'main'),
+    ('a1b2c3d4-0013-0013-0013-000000000013', 120, 0, 'main'),
+    ('a1b2c3d4-0014-0014-0014-000000000014', 100, 0, 'main'),
+    ('a1b2c3d4-0015-0015-0015-000000000015', 400, 0, 'main'),
+    ('a1b2c3d4-0016-0016-0016-000000000016', 400, 0, 'main'),
+    ('a1b2c3d4-0017-0017-0017-000000000017', 150, 0, 'main'),
+    ('a1b2c3d4-0018-0018-0018-000000000018', 200, 0, 'main'),
+    ('a1b2c3d4-0019-0019-0019-000000000019', 100, 0, 'main'),
+    ('a1b2c3d4-0020-0020-0020-000000000020', 150, 0, 'main'),
+    ('a1b2c3d4-0021-0021-0021-000000000021', 600, 0, 'main'),
+    ('a1b2c3d4-0022-0022-0022-000000000022', 200, 0, 'main'),
+    ('a1b2c3d4-0023-0023-0023-000000000023', 150, 0, 'main'),
+    ('a1b2c3d4-0024-0024-0024-000000000024', 300, 0, 'main'),
+    ('a1b2c3d4-0025-0025-0025-000000000025', 400, 0, 'main')
+ON CONFLICT DO NOTHING;

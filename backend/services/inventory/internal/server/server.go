@@ -27,9 +27,14 @@ type Server struct {
 
 // New creates a new Server.
 func New(router *gin.Engine, db *pgxpool.Pool, cfg *config.Config, log *logger.Logger) *Server {
+	// Render injects PORT — use it if set, otherwise fall back to config
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = fmt.Sprintf("%d", cfg.Port)
+	}
 	return &Server{
 		httpServer: &http.Server{
-			Addr:         fmt.Sprintf(":%d", cfg.Port),
+			Addr:         ":" + port,
 			Handler:      router,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,

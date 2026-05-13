@@ -25,7 +25,7 @@ func NewPostgresProductRepo(db *pgxpool.Pool) ProductRepository {
 
 func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, error) {
 	query := `
-	 SELECT id, sku, name, description, price, category, is_active, created_at, updated_at
+	 SELECT id, sku, name, description, price, category, is_active, COALESCE(image_url, ''), created_at, updated_at
 	 FROM products
 	 WHERE is_active = true
 	 ORDER BY category, name
@@ -41,7 +41,7 @@ func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, erro
 		p := &domain.Product{}
 		err := rows.Scan(
 			&p.ID, &p.SKU, &p.Name, &p.Description,
-			&p.Price, &p.Category, &p.IsActive,
+			&p.Price, &p.Category, &p.IsActive, &p.ImageURL,
 			&p.CreatedAt, &p.UpdatedAt,
 		)
 		if err != nil {
@@ -55,7 +55,7 @@ func (r *postgresProductRepo) List(ctx context.Context) ([]*domain.Product, erro
 
 func (r *postgresProductRepo) FindByID(ctx context.Context, id string) (*domain.Product, error) {
 	query := `
-		SELECT id, sku, name, description, price, category, is_active, created_at, updated_at
+		SELECT id, sku, name, description, price, category, is_active, COALESCE(image_url, ''), created_at, updated_at
 		FROM products
 		WHERE id = $1
 	`
@@ -63,7 +63,7 @@ func (r *postgresProductRepo) FindByID(ctx context.Context, id string) (*domain.
 	p := &domain.Product{}
 	err := r.db.QueryRow(ctx, query, id).Scan(
 		&p.ID, &p.SKU, &p.Name, &p.Description,
-		&p.Price, &p.Category, &p.IsActive,
+		&p.Price, &p.Category, &p.IsActive, &p.ImageURL,
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {
@@ -78,7 +78,7 @@ func (r *postgresProductRepo) FindByID(ctx context.Context, id string) (*domain.
 
 func (r *postgresProductRepo) FindBySKU(ctx context.Context, sku string) (*domain.Product, error) {
 	query := `
-		SELECT id, sku, name, description, price, category, is_active, created_at, updated_at
+		SELECT id, sku, name, description, price, category, is_active, COALESCE(image_url, ''), created_at, updated_at
 		FROM products
 		WHERE sku = $1
 	`
@@ -86,7 +86,7 @@ func (r *postgresProductRepo) FindBySKU(ctx context.Context, sku string) (*domai
 	p := &domain.Product{}
 	err := r.db.QueryRow(ctx, query, sku).Scan(
 		&p.ID, &p.SKU, &p.Name, &p.Description,
-		&p.Price, &p.Category, &p.IsActive,
+		&p.Price, &p.Category, &p.IsActive, &p.ImageURL,
 		&p.CreatedAt, &p.UpdatedAt,
 	)
 	if err != nil {

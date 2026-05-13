@@ -1,5 +1,3 @@
-// Package database provides the Postgres connection pool for the Inventory Service.
-// Identical pattern to Auth Service — same pool configuration.
 package database
 
 import (
@@ -12,15 +10,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPool creates and returns a configured Postgres connection pool.
 func NewPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database config: %w", err)
 	}
 
-	poolConfig.MaxConns = 25
-	poolConfig.MinConns = 5
+	// Neon free tier: max 10 connections per database
+	poolConfig.MaxConns = 5
+	poolConfig.MinConns = 1
 	poolConfig.MaxConnLifetime = 1 * time.Hour
 	poolConfig.MaxConnIdleTime = 30 * time.Minute
 

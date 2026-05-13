@@ -93,6 +93,22 @@ rollback-auth:
 rollback-inventory:
 	migrate -path infra/migrations/inventory -database "$(POSTGRES_BASE)/inventory_db?sslmode=disable" down 1
 
+# ── Neon migrations (production) ──────────────────────────────────────────────
+# Usage: make migrate-neon-auth NEON_AUTH_URL=postgres://...
+#        make migrate-neon-all NEON_AUTH_URL=postgres://... NEON_ORDER_URL=postgres://... NEON_INVENTORY_URL=postgres://...
+
+migrate-neon-auth:
+	migrate -path infra/migrations/auth -database "$(NEON_AUTH_URL)" up
+
+migrate-neon-order:
+	migrate -path infra/migrations/order -database "$(NEON_ORDER_URL)" up
+
+migrate-neon-inventory:
+	migrate -path infra/migrations/inventory -database "$(NEON_INVENTORY_URL)" up
+
+migrate-neon-all: migrate-neon-auth migrate-neon-order migrate-neon-inventory
+	@echo "All Neon migrations applied."
+
 # ── Testing ───────────────────────────────────────────────────────────────────
 
 test-auth:

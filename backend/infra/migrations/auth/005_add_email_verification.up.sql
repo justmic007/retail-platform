@@ -1,4 +1,4 @@
-ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE;
 
 CREATE TABLE IF NOT EXISTS email_verification_tokens (
     id         UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -8,5 +8,12 @@ CREATE TABLE IF NOT EXISTS email_verification_tokens (
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_email_verification_tokens_token   ON email_verification_tokens(token);
-CREATE INDEX idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_token   ON email_verification_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_email_verification_tokens_user_id ON email_verification_tokens(user_id);
+
+-- Mark seeded accounts as email verified
+UPDATE users SET email_verified = TRUE
+WHERE email IN (
+    'admin@retailplatform.com',
+    'order-service@internal.retailplatform.com'
+);

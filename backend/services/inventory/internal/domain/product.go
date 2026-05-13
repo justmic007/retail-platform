@@ -14,6 +14,7 @@ type Product struct {
 	Price       float64
 	Category    string
 	IsActive    bool
+	ImageURL    string
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 }
@@ -50,6 +51,7 @@ type ProductResponse struct {
 	Price       float64 `json:"price"`
 	Category    string  `json:"category"`
 	IsActive    bool    `json:"is_active"`
+	ImageURL    string  `json:"image_url"`
 	// Stock info embedded directly so the client can have one response object
 	Quantity  int `json:"quantity"`
 	Reserved  int `json:"reserved"`
@@ -76,6 +78,7 @@ func (p *ProductWithStock) ToResponse() *ProductResponse {
 		Price:       p.Product.Price,
 		Category:    p.Product.Category,
 		IsActive:    p.Product.IsActive,
+		ImageURL:    p.Product.ImageURL,
 		Quantity:    quantity,
 		Reserved:    reserved,
 		Available:   available,

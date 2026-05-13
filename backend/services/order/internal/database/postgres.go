@@ -1,4 +1,3 @@
-// Package database provides functions to connect to the PostgreSQL database and perform migrations for the Order Service. It abstracts away all database-related logic, so other parts of the service can interact with a clean interface.
 package database
 
 import (
@@ -6,20 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
-
 	"retail-platform/order/internal/config"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPool creates and returns a configured Postgres connection pool.
 func NewPool(ctx context.Context, cfg *config.Config) (*pgxpool.Pool, error) {
 	poolConfig, err := pgxpool.ParseConfig(cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse database config: %w", err)
 	}
 
-	poolConfig.MaxConns = 25
-	poolConfig.MinConns = 5
+	// Neon free tier: max 10 connections per database
+	poolConfig.MaxConns = 5
+	poolConfig.MinConns = 1
 	poolConfig.MaxConnLifetime = 1 * time.Hour
 	poolConfig.MaxConnIdleTime = 30 * time.Minute
 

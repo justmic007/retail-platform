@@ -26,6 +26,12 @@ type Server struct {
 func New(cfg *config.Config, log *logger.Logger) *Server {
 	mux := http.NewServeMux()
 
+	// Render injects PORT — use it if set, otherwise fall back to config
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = fmt.Sprintf("%d", cfg.Port)
+	}
+
 	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
 		setCORSHeaders(w, r)
 		if r.Method == http.MethodOptions {
@@ -50,7 +56,7 @@ func New(cfg *config.Config, log *logger.Logger) *Server {
 
 	return &Server{
 		httpServer: &http.Server{
-			Addr:         fmt.Sprintf(":%d", cfg.Port),
+			Addr:         ":" + port,
 			Handler:      mux,
 			ReadTimeout:  10 * time.Second,
 			WriteTimeout: 10 * time.Second,
