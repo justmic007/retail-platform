@@ -5,19 +5,43 @@ import { User, Lock, Mail, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { PasswordInput } from "@/components/ui/password-input";
+import { ValidatedPasswordInput } from "@/components/ui/validated-password-input";
 import { useAuth } from "@/hooks/useAuth";
 import { changePassword } from "@/lib/api";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth();
-  const [currentPassword, setCurrentPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+
+  const { formState, setValue, setTouched, validateAll, getValues, reset } = useFormValidation(
+    { currentPassword: "", newPassword: "", confirmPassword: "" },
+    {
+      currentPassword: {
+        required: true,
+        minLength: 1
+      },
+      newPassword: {
+        required: true,
+        minLength: 8,
+        custom: (value: string) => {
+          if (!/(?=.*[a-z])/.test(value)) return "Password must contain at least one lowercase letter";
+          if (!/(?=.*[A-Z])/.test(value)) return "Password must contain at least one uppercase letter";
+          if (!/(?=.*\d)/.test(value)) return "Password must contain at least one number";
+          return null;
+        }
+      },
+      confirmPassword: {
+        required: true,
+        custom: (value: string) => {
+          const newPassword = formState.newPassword?.value || "";
+          return value !== newPassword ? "Passwords do not match" : null;
+        }
+      }
+    }
+  );
 
   if (authLoading) {
     return (
@@ -44,24 +68,18 @@ export default function ProfilePage() {
     setError("");
     setSuccess("");
 
-    if (newPassword !== confirmPassword) {
-      setError("New passwords don't match");
-      return;
-    }
-
-    if (newPassword.length < 8) {
-      setError("New password must be at least 8 characters");
+    if (!validateAll()) {
+      toast.error("Please fix the errors below");
       return;
     }
 
     setLoading(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      const values = getValues();
+      await changePassword(values.currentPassword, values.newPassword);
       setSuccess("Password changed successfully. Please log in again on all devices.");
       toast.success("Password changed successfully!");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
+      reset();
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === "UNAUTHORIZED") {
@@ -128,46 +146,46 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <form onSubmit={handleChangePassword} className="space-y-4">
-              <div className="space-y-2">
-                <label htmlFor="current-password" className="text-sm font-medium">
-                  Current Password
-                </label>
-                <PasswordInput
-                  id="current-password"
-                  value={currentPassword}
-                  onChange={(e) => setCurrentPassword(e.target.value)}
-                  required
-                  autoComplete="current-password"
-                />
-              </div>
+              <ValidatedPasswordInput
+                id="current-password"
+                label="Current Password"
+                value={formState.currentPassword.value}
+                onChange={(e) => setValue("currentPassword", e.target.value)}
+                onBlur={() => setTouched("currentPassword")}
+                error={formState.currentPassword.error}
+                touched={formState.currentPassword.touched}
+                autoComplete="current-password"
+                showValidIcon={false}
+              />
 
-              <div className="space-y-2">
-                <label htmlFor="new-password" className="text-sm font-medium">
-                  New Password
-                </label>
-                <PasswordInput
-                  id="new-password"
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </div>
+              <ValidatedPasswordInput
+                id="new-password"
+                label="New Password"
+                placeholder="Min. 8 characters with uppercase, lowercase, and number"
+                value={formState.newPassword.value}
+                onChange={(e) => {
+                  setValue("newPassword", e.target.value);
+                  // Re-validate confirm password when new password changes
+                  if (formState.confirmPassword.touched) {
+                    setTouched("confirmPassword");
+                  }
+                }}
+                onBlur={() => setTouched("newPassword")}
+                error={formState.newPassword.error}
+                touched={formState.newPassword.touched}
+                autoComplete="new-password"
+              />
 
-              <div className="space-y-2">
-                <label htmlFor="confirm-password" className="text-sm font-medium">
-                  Confirm New Password
-                </label>
-                <PasswordInput
-                  id="confirm-password"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
-                />
-              </div>
+              <ValidatedPasswordInput
+                id="confirm-password"
+                label="Confirm New Password"
+                value={formState.confirmPassword.value}
+                onChange={(e) => setValue("confirmPassword", e.target.value)}
+                onBlur={() => setTouched("confirmPassword")}
+                error={formState.confirmPassword.error}
+                touched={formState.confirmPassword.touched}
+                autoComplete="new-password"
+              />
 
               {error && (
                 <div className="text-sm text-destructive bg-destructive/10 p-3 rounded">

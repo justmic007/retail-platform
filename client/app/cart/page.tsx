@@ -6,8 +6,10 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCartStore } from "@/lib/cart";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function CartPage() {
+  const { user } = useAuth();
   const { items, updateQuantity, removeItem, totalPrice, totalItems } = useCartStore();
 
   if (items.length === 0) {
@@ -126,7 +128,7 @@ export default function CartPage() {
                 <span>R{totalPrice().toFixed(2)}</span>
               </div>
               <Button asChild className="w-full" size="lg">
-                <Link href="/checkout">Proceed to Checkout</Link>
+                <Link href={user ? "/checkout" : "/login?redirect=/checkout"}>Proceed to Checkout</Link>
               </Button>
               <Button asChild variant="outline" className="w-full">
                 <Link href="/">Continue Shopping</Link>

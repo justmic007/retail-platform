@@ -37,7 +37,7 @@ export function useAuth() {
     }
     clearTokens();
     setUser(null);
-    router.push("/login");
+    router.push("/");
   }
 
   return { user, loading, login, logout };
