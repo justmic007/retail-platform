@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -23,15 +24,19 @@ export function LoginForm() {
     try {
       await login(email, password);
       const redirect = searchParams.get("redirect") ?? "/";
+      toast.success("Welcome back!");
       router.push(redirect);
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === "UNAUTHORIZED") {
         setError("Invalid email or password.");
+        toast.error("Invalid email or password");
       } else if (e.message?.includes("verify")) {
         setError("Please verify your email before signing in.");
+        toast.error("Please verify your email before signing in");
       } else {
         setError(e.message ?? "Sign in failed. Please try again.");
+        toast.error("Sign in failed. Please try again.");
       }
     } finally {
       setLoading(false);

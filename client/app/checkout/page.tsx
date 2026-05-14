@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CreditCard } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -72,6 +73,8 @@ export default function CheckoutPage() {
 
       const response = await createOrder(orderData);
       
+      toast.success("Order placed successfully!");
+      
       // Navigate to order confirmation first, then clear cart
       router.push(`/orders/${response.order.id}`);
       
@@ -85,8 +88,10 @@ export default function CheckoutPage() {
       const e = err as Error & { code?: string };
       if (e.code === "INSUFFICIENT_STOCK") {
         setError("Some items are no longer available. Please check your cart.");
+        toast.error("Some items are no longer available");
       } else {
         setError(e.message || "Failed to place order. Please try again.");
+        toast.error("Failed to place order. Please try again.");
       }
       setIsPlacingOrder(false);
     } finally {

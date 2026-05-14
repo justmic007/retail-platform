@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, User, LogOut, Package } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useCartStore } from "@/lib/cart";
@@ -67,7 +68,10 @@ export function Navbar() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  toast.success("Signed out successfully");
+                }}
                 title="Sign out"
               >
                 <LogOut className="h-5 w-5" />

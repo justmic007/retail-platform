@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
@@ -20,13 +21,16 @@ export function RegisterForm() {
     setLoading(true);
     try {
       await register(email, password);
+      toast.success("Account created! Check your email to verify.");
       router.push("/verify-email");
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === "CONFLICT") {
         setError("An account with this email already exists.");
+        toast.error("An account with this email already exists");
       } else {
         setError(e.message ?? "Registration failed. Please try again.");
+        toast.error("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);

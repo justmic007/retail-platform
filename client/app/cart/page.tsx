@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Trash2, Plus, Minus, ShoppingBag } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useCartStore } from "@/lib/cart";
@@ -84,7 +85,10 @@ export default function CartPage() {
                     variant="ghost"
                     size="icon"
                     className="h-8 w-8 text-destructive hover:text-destructive"
-                    onClick={() => removeItem(item.product.id)}
+                    onClick={() => {
+                      removeItem(item.product.id);
+                      toast.success(`Removed ${item.product.name} from cart`);
+                    }}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>

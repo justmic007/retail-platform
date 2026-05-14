@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
@@ -60,7 +61,10 @@ export function ProductCard({ product }: Props) {
           className="w-full"
           size="sm"
           disabled={product.available === 0}
-          onClick={() => addItem(product)}
+          onClick={() => {
+            addItem(product);
+            toast.success(`Added ${product.name} to cart`);
+          }}
         >
           <ShoppingCart className="h-4 w-4 mr-2" />
           Add to cart

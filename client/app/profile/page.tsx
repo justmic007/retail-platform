@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { User, Lock, Mail, Calendar } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -57,6 +58,7 @@ export default function ProfilePage() {
     try {
       await changePassword(currentPassword, newPassword);
       setSuccess("Password changed successfully. Please log in again on all devices.");
+      toast.success("Password changed successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
@@ -64,8 +66,10 @@ export default function ProfilePage() {
       const e = err as Error & { code?: string };
       if (e.code === "UNAUTHORIZED") {
         setError("Current password is incorrect");
+        toast.error("Current password is incorrect");
       } else {
         setError(e.message || "Failed to change password");
+        toast.error("Failed to change password");
       }
     } finally {
       setLoading(false);
