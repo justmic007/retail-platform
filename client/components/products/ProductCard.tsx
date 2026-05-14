@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { ShoppingCart } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -14,6 +15,7 @@ interface Props {
 
 export function ProductCard({ product }: Props) {
   const addItem = useCartStore((s) => s.addItem);
+  const [imageError, setImageError] = useState(false);
 
   const stockBadge =
     product.available === 0
@@ -25,11 +27,13 @@ export function ProductCard({ product }: Props) {
   return (
     <Card className="flex flex-col overflow-hidden">
       <Link href={`/products/${product.id}`} className="relative aspect-square bg-muted overflow-hidden">
-        {product.image_url ? (
+        {product.image_url && !imageError ? (
           <img
             src={product.image_url}
             alt={product.name}
             className="w-full h-full object-cover transition-transform hover:scale-105"
+            onError={() => setImageError(true)}
+            loading="lazy"
           />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground text-sm">
