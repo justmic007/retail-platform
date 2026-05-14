@@ -19,6 +19,7 @@ import (
 func main() {
 	// Load .env file if present (local development only)
 	_ = godotenv.Load()
+	_ = godotenv.Load("../../.env")
 
 	// Step 1: Config
 	cfg := config.Load()

@@ -2,6 +2,7 @@
 bin/
 /server
 services/*/server
+services/*/cmd/server/server
 *.exe
 *.exe~
 *.dll
