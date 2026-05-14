@@ -1,6 +1,6 @@
 # ── retail-platform Makefile ──────────────────────────────────────────────────
 # Run `make help` to see all available commands
-.PHONY: help infra-up infra-down run-auth run-order run-inventory run-notification \
+.PHONY: help infra-up infra-down run-all run-auth run-order run-inventory run-notification \
         test test-race lint migrate-auth migrate-order migrate-inventory tidy
 
 # Default target — show help
@@ -56,14 +56,17 @@ infra-reset:
 # ── Run services ──────────────────────────────────────────────────────────────
 # We use -race flag even in development to catch race conditions early
 
+run-all:
+	overmind start --no-port
+
 run-auth:
-	cd services/auth && go run -race ./cmd/server/...
+	cd services/auth && export $(grep -v '^#' .env | grep -v '^$$' | xargs) && go run -race ./cmd/server/...
 
 run-order:
-	cd services/order && go run -race ./cmd/server/...
+	cd services/order && export $(grep -v '^#' .env | grep -v '^$$' | xargs) && go run -race ./cmd/server/...
 
 run-inventory:
-	cd services/inventory && go run -race ./cmd/server/...
+	cd services/inventory && export $(grep -v '^#' .env | grep -v '^$$' | xargs) && go run -race ./cmd/server/...
 
 run-notification:
 	cd services/notification && go run -race ./cmd/server/...
