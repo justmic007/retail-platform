@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { register } from "@/lib/api";
 
 export function RegisterForm() {
@@ -52,9 +53,8 @@ export function RegisterForm() {
         <label htmlFor="password" className="text-sm font-medium">
           Password
         </label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           placeholder="Min. 8 characters"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

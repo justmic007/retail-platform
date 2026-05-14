@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { useAuth } from "@/hooks/useAuth";
 
 export function LoginForm() {
@@ -57,9 +58,8 @@ export function LoginForm() {
         <label htmlFor="password" className="text-sm font-medium">
           Password
         </label>
-        <Input
+        <PasswordInput
           id="password"
-          type="password"
           placeholder="Your password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
