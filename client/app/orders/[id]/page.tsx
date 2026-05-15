@@ -37,7 +37,7 @@ export default function OrderDetailPage({ params }: Props) {
   const router = useRouter();
   const { user } = useAuth();
   const [cancelling, setCancelling] = useState(false);
-  
+
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["orders", id],
     queryFn: () => getOrder(id),
@@ -78,7 +78,7 @@ export default function OrderDetailPage({ params }: Props) {
 
   async function handleCancel() {
     if (!canCancel) return;
-    
+
     setCancelling(true);
     try {
       await cancelOrder(order.id);
@@ -113,7 +113,7 @@ export default function OrderDetailPage({ params }: Props) {
                   {new Date(order.created_at).toLocaleTimeString()}
                 </p>
               </div>
-              
+
               {canCancel && (
                 <Button
                   variant="outline"
@@ -145,11 +145,11 @@ export default function OrderDetailPage({ params }: Props) {
                       Quantity: {item.quantity}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Unit price: R{parseFloat(item.unit_price).toFixed(2)}
+                      Unit price: ${parseFloat(item.unit_price).toFixed(2)}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium">R{parseFloat(item.total_price).toFixed(2)}</p>
+                    <p className="font-medium">${parseFloat(item.total_price).toFixed(2)}</p>
                   </div>
                 </div>
               ))}
@@ -192,7 +192,7 @@ export default function OrderDetailPage({ params }: Props) {
             <CardContent className="space-y-2">
               <div className="flex justify-between text-sm">
                 <span>Subtotal:</span>
-                <span>R{parseFloat(order.total_amount).toFixed(2)}</span>
+                <span>${parseFloat(order.total_amount).toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping:</span>

@@ -28,7 +28,7 @@ export default function CartPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-bold mb-6">Shopping Cart ({totalItems()} items)</h1>
-      
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Cart Items */}
         <div className="lg:col-span-2 space-y-4">
@@ -58,7 +58,7 @@ export default function CartPage() {
                   <div className="flex-1 min-w-0">
                     <h3 className="font-medium text-sm">{item.product.name}</h3>
                     <p className="text-xs text-muted-foreground">{item.product.category}</p>
-                    <p className="text-sm font-semibold mt-1">R{item.product.price.toFixed(2)}</p>
+                    <p className="text-sm font-semibold mt-1">${item.product.price.toFixed(2)}</p>
                   </div>
 
                   {/* Quantity Controls */}
@@ -116,7 +116,7 @@ export default function CartPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal ({totalItems()} items)</span>
-                <span>R{totalPrice().toFixed(2)}</span>
+                <span>${totalPrice().toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping</span>
@@ -125,7 +125,7 @@ export default function CartPage() {
               <hr />
               <div className="flex justify-between font-semibold">
                 <span>Total</span>
-                <span>R{totalPrice().toFixed(2)}</span>
+                <span>${totalPrice().toFixed(2)}</span>
               </div>
               <Button asChild className="w-full" size="lg">
                 <Link href={user ? "/checkout" : "/login?redirect=/checkout"}>Proceed to Checkout</Link>

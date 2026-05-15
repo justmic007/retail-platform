@@ -27,7 +27,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     if (!mounted || authLoading) return;
-    
+
     if (!user) {
       router.push("/login?redirect=/checkout");
       return;
@@ -58,10 +58,10 @@ export default function CheckoutPage() {
     setLoading(true);
     setError("");
     setIsPlacingOrder(true);
-    
+
     try {
       const idempotencyKey = `checkout-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      
+
       const orderData = {
         idempotency_key: idempotencyKey,
         items: items.map(item => ({
@@ -72,18 +72,18 @@ export default function CheckoutPage() {
       };
 
       const response = await createOrder(orderData);
-      
+
       toast.success("Order placed successfully!");
-      
+
       // Navigate to order confirmation first, then clear cart
       router.push(`/orders/${response.order.id}`);
-      
+
       // Clear cart after navigation to prevent useEffect redirect
       setTimeout(() => {
         clearCart();
         setIsPlacingOrder(false);
       }, 100);
-      
+
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === "INSUFFICIENT_STOCK") {
@@ -172,7 +172,7 @@ export default function CheckoutPage() {
             <CardContent className="space-y-4">
               <div className="flex justify-between text-sm">
                 <span>Subtotal</span>
-                <span>R{totalPrice().toFixed(2)}</span>
+                <span>${totalPrice().toFixed(2)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span>Shipping</span>
@@ -185,7 +185,7 @@ export default function CheckoutPage() {
               <hr />
               <div className="flex justify-between font-semibold text-lg">
                 <span>Total</span>
-                <span>R{totalPrice().toFixed(2)}</span>
+                <span>${totalPrice().toFixed(2)}</span>
               </div>
 
               {error && (
@@ -194,8 +194,8 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              <Button 
-                className="w-full" 
+              <Button
+                className="w-full"
                 size="lg"
                 onClick={handlePlaceOrder}
                 disabled={loading}

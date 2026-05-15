@@ -77,7 +77,7 @@ export default function ProductDetailPage({ params }: Props) {
             <p className="text-sm text-muted-foreground mt-1">SKU: {product.sku}</p>
           </div>
 
-          <p className="text-3xl font-bold">R{product.price.toFixed(2)}</p>
+          <p className="text-3xl font-bold">${product.price.toFixed(2)}</p>
 
           {outOfStock ? (
             <Badge variant="destructive">Out of stock</Badge>

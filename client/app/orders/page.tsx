@@ -107,7 +107,7 @@ export default function OrdersPage() {
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <h1 className="text-2xl font-bold mb-6">Your Orders ({orders.length})</h1>
-      
+
       <div className="space-y-4">
         {orders.map((order) => (
           <Card key={order.id}>
@@ -118,10 +118,10 @@ export default function OrdersPage() {
                     <h3 className="font-medium">Order #{order.id.slice(-8)}</h3>
                     {getStatusBadge(order.status)}
                   </div>
-                  
+
                   <div className="text-sm text-muted-foreground space-y-1">
                     <p>Placed on {new Date(order.created_at).toLocaleDateString()}</p>
-                    <p className="font-medium text-foreground">Total: R{parseFloat(order.total_amount).toFixed(2)}</p>
+                    <p className="font-medium text-foreground">Total: ${parseFloat(order.total_amount).toFixed(2)}</p>
                   </div>
                 </div>
 
