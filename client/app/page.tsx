@@ -3,7 +3,7 @@
 import { Suspense } from "react";
 import { useProducts } from "@/hooks/useProducts";
 import { ProductGrid } from "@/components/products/ProductGrid";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { ProductGridSkeleton } from "@/components/ui/product-skeleton";
 import { useSearchParams } from "next/navigation";
 import { useMemo } from "react";
 
@@ -32,11 +32,7 @@ function ProductsContent() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground mt-1">Loading products...</p>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-lg bg-muted animate-pulse aspect-[3/4]" />
-          ))}
-        </div>
+        <ProductGridSkeleton />
       </div>
     );
   }
@@ -75,11 +71,7 @@ export default function HomePage() {
           <h1 className="text-3xl font-bold tracking-tight">Products</h1>
           <p className="text-muted-foreground mt-1">Loading...</p>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-lg bg-muted animate-pulse aspect-[3/4]" />
-          ))}
-        </div>
+        <ProductGridSkeleton />
       </div>
     }>
       <ProductsContent />
