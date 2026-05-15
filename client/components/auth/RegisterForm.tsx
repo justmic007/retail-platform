@@ -2,30 +2,61 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { ValidatedInput } from "@/components/ui/validated-input";
+import { ValidatedPasswordInput } from "@/components/ui/validated-password-input";
 import { register } from "@/lib/api";
+import { useFormValidation } from "@/hooks/useFormValidation";
 
 export function RegisterForm() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const { formState, setValue, setTouched, validateAll, getValues } = useFormValidation(
+    { email: "", password: "" },
+    {
+      email: {
+        required: true,
+        pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      },
+      password: {
+        required: true,
+        minLength: 8,
+        custom: (value: string) => {
+          if (!/(?=.*[a-z])/.test(value)) return "Password must contain at least one lowercase letter";
+          if (!/(?=.*[A-Z])/.test(value)) return "Password must contain at least one uppercase letter";
+          if (!/(?=.*\d)/.test(value)) return "Password must contain at least one number";
+          return null;
+        }
+      }
+    }
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
+    
+    if (!validateAll()) {
+      toast.error("Please fix the errors below");
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(email, password);
+      const values = getValues();
+      await register(values.email, values.password);
+      toast.success("Account created! Check your email to verify.");
       router.push("/verify-email");
     } catch (err: unknown) {
       const e = err as Error & { code?: string };
       if (e.code === "CONFLICT") {
         setError("An account with this email already exists.");
+        toast.error("An account with this email already exists");
       } else {
         setError(e.message ?? "Registration failed. Please try again.");
+        toast.error("Registration failed. Please try again.");
       }
     } finally {
       setLoading(false);
@@ -34,36 +65,37 @@ export function RegisterForm() {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label htmlFor="email" className="text-sm font-medium">
-          Email
-        </label>
-        <Input
-          id="email"
-          type="email"
-          placeholder="you@example.com"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          required
-          autoComplete="email"
-        />
-      </div>
-      <div className="space-y-2">
-        <label htmlFor="password" className="text-sm font-medium">
-          Password
-        </label>
-        <Input
-          id="password"
-          type="password"
-          placeholder="Min. 8 characters"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required
-          minLength={8}
-          autoComplete="new-password"
-        />
-      </div>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      <ValidatedInput
+        id="email"
+        type="email"
+        label="Email"
+        placeholder="you@example.com"
+        value={formState.email.value}
+        onChange={(e) => setValue("email", e.target.value)}
+        onBlur={() => setTouched("email")}
+        error={formState.email.error}
+        touched={formState.email.touched}
+        autoComplete="email"
+      />
+      
+      <ValidatedPasswordInput
+        id="password"
+        label="Password"
+        placeholder="Min. 8 characters with uppercase, lowercase, and number"
+        value={formState.password.value}
+        onChange={(e) => setValue("password", e.target.value)}
+        onBlur={() => setTouched("password")}
+        error={formState.password.error}
+        touched={formState.password.touched}
+        autoComplete="new-password"
+      />
+      
+      {error && (
+        <div className="text-sm text-destructive bg-destructive/10 p-3 rounded flex items-center gap-2">
+          <span>{error}</span>
+        </div>
+      )}
+      
       <Button type="submit" className="w-full" disabled={loading}>
         {loading ? "Creating account..." : "Create account"}
       </Button>

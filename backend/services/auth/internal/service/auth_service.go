@@ -70,8 +70,8 @@ func (s *AuthService) Register(ctx context.Context, req domain.RegisterRequest) 
 
 	s.log.Info().Str("user_id", created.ID).Str("email", created.Email).Msg("new user registered")
 
-	// Generate and store verification token — best effort, don't fail registration
-	s.sendVerificationEmail(ctx, created)
+	// Send verification email asynchronously — don't block the HTTP response
+	go s.sendVerificationEmail(context.WithoutCancel(ctx), created)
 
 	return created, nil
 }
@@ -152,7 +152,8 @@ func (s *AuthService) ResendVerification(ctx context.Context, email string) erro
 		return nil // already verified — silently succeed
 	}
 
-	s.sendVerificationEmail(ctx, user)
+	// Send verification email asynchronously
+	go s.sendVerificationEmail(context.WithoutCancel(ctx), user)
 	return nil
 }
 

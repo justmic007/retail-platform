@@ -1,7 +1,6 @@
 "use client";
 
-import { use } from "react";
-import Image from "next/image";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingCart, ArrowLeft } from "lucide-react";
 import { useProduct } from "@/hooks/useProducts";
@@ -18,6 +17,7 @@ export default function ProductDetailPage({ params }: Props) {
   const router = useRouter();
   const { data, isLoading, isError } = useProduct(id);
   const addItem = useCartStore((s) => s.addItem);
+  const [imageError, setImageError] = useState(false);
 
   if (isLoading) {
     return (
@@ -55,18 +55,17 @@ export default function ProductDetailPage({ params }: Props) {
 
       <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
         <div className="relative aspect-square rounded-lg overflow-hidden bg-muted">
-          {product.image_url ? (
-            <Image
+          {product.image_url && !imageError ? (
+            <img
               src={product.image_url}
               alt={product.name}
-              fill
-              className="object-cover"
-              sizes="(max-width: 768px) 100vw, 50vw"
-              priority
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={() => setImageError(true)}
             />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
-              No image
+              No image available
             </div>
           )}
         </div>
