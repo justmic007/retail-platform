@@ -22,12 +22,29 @@ export default function ProductDetailPage({ params }: Props) {
   if (isLoading) {
     return (
       <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6">
-        <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
-          <div className="aspect-square rounded-lg bg-muted animate-pulse" />
-          <div className="space-y-4">
-            <div className="h-8 bg-muted rounded animate-pulse w-3/4" />
-            <div className="h-4 bg-muted rounded animate-pulse w-1/2" />
-            <div className="h-6 bg-muted rounded animate-pulse w-1/4" />
+        <div className="animate-pulse">
+          {/* Back button skeleton */}
+          <div className="h-9 w-20 bg-muted rounded mb-6" />
+          
+          <div className="grid grid-cols-1 gap-10 md:grid-cols-2">
+            {/* Image skeleton */}
+            <div className="aspect-square rounded-lg bg-muted" />
+            
+            {/* Content skeleton */}
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-1/3" />
+                <div className="h-8 bg-muted rounded w-3/4" />
+                <div className="h-4 bg-muted rounded w-1/4" />
+              </div>
+              <div className="h-10 bg-muted rounded w-1/3" />
+              <div className="h-6 bg-muted rounded w-1/4" />
+              <div className="space-y-2">
+                <div className="h-4 bg-muted rounded w-full" />
+                <div className="h-4 bg-muted rounded w-2/3" />
+              </div>
+              <div className="h-11 bg-muted rounded w-full" />
+            </div>
           </div>
         </div>
       </div>
