@@ -190,8 +190,8 @@ Your order #dd952859 has been confirmed.
 ┌─────────────────────┬─────┬────────────┬──────────┐
 │ Item                │ Qty │ Unit Price │ Total    │
 ├─────────────────────┼─────┼────────────┼──────────┤
-│ Sunflower Oil 2L    │  2  │ R89.99     │ R179.98  │
-│ Full Cream Milk 1L  │  3  │ R24.99     │ R74.97   │
+│ Sunflower Oil 2L    │  2  │ $89.99     │ $179.98  │
+│ Full Cream Milk 1L  │  3  │ $24.99     │ $74.97   │
 └─────────────────────┴─────┴────────────┴──────────┘
 
 Total: R254.95
@@ -260,7 +260,7 @@ Published by Order Service.
 | `order_id` | string | UUID of the order |
 | `user_id` | string | UUID of the customer |
 | `user_email` | string | Customer email — from JWT, not client input |
-| `total` | float64 | Order total in ZAR |
+| `total` | float64 | Order total in USD |
 | `items` | array | Line items — only populated on `ORDER_CONFIRMED` |
 | `items[].product_name` | string | Product name snapshot at order time |
 | `items[].quantity` | int | Units ordered |

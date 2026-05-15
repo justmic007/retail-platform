@@ -22,8 +22,8 @@ export function ProductCard({ product }: Props) {
     product.available === 0
       ? { label: "Out of stock", variant: "destructive" as const }
       : product.available <= 10
-      ? { label: `Only ${product.available} left`, variant: "secondary" as const }
-      : { label: "In stock", variant: "outline" as const };
+        ? { label: `Only ${product.available} left`, variant: "secondary" as const }
+        : { label: "In stock", variant: "outline" as const };
 
   return (
     <Card className="flex flex-col overflow-hidden">
@@ -53,7 +53,7 @@ export function ProductCard({ product }: Props) {
           </h3>
         </Link>
         <p className="text-xs text-muted-foreground">{product.category}</p>
-        <p className="font-semibold">R{product.price.toFixed(2)}</p>
+        <p className="font-semibold">${product.price.toFixed(2)}</p>
       </CardContent>
 
       <CardFooter className="p-4 pt-0">
