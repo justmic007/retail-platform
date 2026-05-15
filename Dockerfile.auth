@@ -1,0 +1,33 @@
+# Dockerfile for Auth Service deployment on Render
+FROM golang:1.25-alpine AS builder
+
+WORKDIR /app
+
+# Copy go.work and all go.mod files
+COPY backend/go.work backend/go.work.sum ./
+COPY backend/pkg/go.mod backend/pkg/go.sum ./pkg/
+COPY backend/services/auth/go.mod backend/services/auth/go.sum ./services/auth/
+COPY backend/services/order/go.mod backend/services/order/go.sum ./services/order/
+COPY backend/services/inventory/go.mod backend/services/inventory/go.sum ./services/inventory/
+COPY backend/services/notification/go.mod backend/services/notification/go.sum ./services/notification/
+
+# Download dependencies
+RUN cd services/auth && go mod download
+
+# Copy source code
+COPY backend/pkg/ ./pkg/
+COPY backend/services/auth/ ./services/auth/
+
+# Build the binary
+RUN CGO_ENABLED=0 GOOS=linux go build -o auth ./services/auth/cmd/server/...
+
+# Final stage
+FROM alpine:latest
+RUN apk --no-cache add ca-certificates tzdata
+WORKDIR /root/
+
+COPY --from=builder /app/auth .
+
+EXPOSE 8080
+
+CMD ["./auth"]
